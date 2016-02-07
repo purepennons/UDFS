@@ -1,5 +1,3 @@
-import fuse from 'fuse-bindings'
-
 let ops = {}
 
 ops.options = ['direct_io', 'dev', 'debug']

@@ -4,7 +4,7 @@
   "description": "Software Defined Storage",
   "main": "entry.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "./node_modules/.bin/mocha --compilers js:babel-core/register",
     "stop": "sh ./script/stop.sh",
     "start": "sh ./script/restart.sh"
   },
