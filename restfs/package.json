@@ -1,0 +1,24 @@
+{
+  "name": "restfs",
+  "version": "0.0.1",
+  "description": "expose restful api interface for your local file system",
+  "main": "entry.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --compilers js:babel-core/register",
+    "start": "node entry.js"
+  },
+  "author": "Chiahao Lin",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-core": "6.4.5",
+    "babel-polyfill": "6.3.14",
+    "babel-preset-es2015": "6.3.13",
+    "babel-preset-stage-0": "6.3.13",
+    "chai": "3.5.0",
+    "mocha": "2.4.5"
+  },
+  "dependencies": {
+    "body-parser": "1.14.2",
+    "express": "4.13.4"
+  }
+}
