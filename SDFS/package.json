@@ -5,6 +5,7 @@
   "main": "entry.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "stop": "sh ./script/stop.sh",
     "start": "sh ./script/restart.sh"
   },
   "author": "Chiahao Lin",
