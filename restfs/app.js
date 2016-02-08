@@ -4,6 +4,10 @@ import fs from 'fs'
 import path from 'path'
 import express from 'express'
 import bodyParser from 'body-parser'
+import { pathParser } from './middlewares/parser'
+import { ignoreFavicon } from './middlewares/filiter'
+import { typeValidator } from './middlewares/validator'
+
 import file_router from './routes/files'
 
 // routers
@@ -13,9 +17,10 @@ let app = express()
 // middleware
 app.use( bodyParser.json() )
 app.use( bodyParser.urlencoded({ extended: true }) )
+app.use ( ignoreFavicon )
 
 // routers
-app.use( '*', file_router )
+app.use( '*', [pathParser, typeValidator], file_router )
 
 app.use( (req, res, next) => {
   let err = new Error('Not Found')
