@@ -1,3 +1,5 @@
+"use strict"
+
 import fs from 'fs'
 
 function typeValidator(req, res, next) {
