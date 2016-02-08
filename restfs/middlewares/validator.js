@@ -1,6 +1,7 @@
 "use strict"
 
 import fs from 'fs'
+import path from 'path'
 
 function typeValidator(req, res, next) {
   fs.stat(req.file_path, (err, st) => {
@@ -15,8 +16,10 @@ function typeValidator(req, res, next) {
       req.type = 'file'
     }
 
+    req.filename = path.basename(req.file_path)
     req.stat = st
 
+    console.log('filename', req.filename)
     console.log('type: ', req.type)
     console.log('stat', req.stat)
 
