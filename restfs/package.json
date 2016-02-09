@@ -8,6 +8,10 @@
     "start": "node entry.js"
   },
   "author": "Chiahao Lin",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purepennons/thesis.git"
+  },
   "license": "ISC",
   "devDependencies": {
     "babel-core": "6.4.5",
@@ -20,6 +24,7 @@
   "dependencies": {
     "bluebird": "3.2.2",
     "body-parser": "1.14.2",
-    "express": "4.13.4"
+    "express": "4.13.4",
+    "pump": "1.0.1"
   }
 }

@@ -1,6 +1,7 @@
 "use strict"
 
 import path from 'path'
+import pump from 'pump'
 import express from 'express'
 import Promise from 'bluebird'
 
@@ -11,24 +12,49 @@ router.get('/', (req, res, next) => {
   // field: ['metadata', 'stat', 'type', 'path', 'mount_path', 'content', 'filename', 'size', 'list_only']
   let field = req.query.field
   // no field => always return stat, path, mount_path and type
+  let result = {
+    name: req.filename,
+    path: req.file_path,
+    mount_path: req.file_path,
+    type: req.type,
+    stat: req.stat
+  }
+
   if(!field) {
     return res.status(200).json({
       status: 'success',
       message: '',
-      data: [
-        {
-          name: req.filename,
-          path: req.file_path,
-          mount_path: req.file_path,
-          type: req.type,
-          stat: req.stat
-        }
-      ]
+      data: [result]
     })
   }
 
   if(req.type === 'file') {
-    // return the file
+
+    async function getContent() {
+      try {
+        // return the file
+        // only return the content when 'content' field is in the field prop.
+        if(field.indexOf('content') > -1) {
+          res.set('Content-Length', req.stat.size)
+          pump(fs.createReadStream(req.file_path), res)
+        } else {
+          // filter fields
+          return res.status(200).json({
+            status: 'success',
+            message: '',
+            data: [result]
+          })
+        }
+      } catch(err) {
+        throw err
+      }
+    }
+
+    getContent().catch( catchError => {
+      catchError.status = 500
+      return next(catchError)
+    })
+
   } else {
     // return the list of the directory
     async function readdir() {
@@ -76,7 +102,7 @@ router.get('/', (req, res, next) => {
       }
     }
 
-    readdir().then().catch( catchError => {
+    readdir().catch( catchError => {
       catchError.status = 500
       return next(catchError)
     })
