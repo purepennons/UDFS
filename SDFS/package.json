@@ -9,6 +9,10 @@
     "start": "sh ./script/restart.sh"
   },
   "author": "Chiahao Lin",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purepennons/thesis.git"
+  },
   "license": "ISC",
   "devDependencies": {
     "babel-core": "6.4.5",
@@ -19,6 +23,8 @@
     "mocha": "2.4.5"
   },
   "dependencies": {
-    "fuse-bindings": "^2.8.1"
+    "bluebird": "3.2.2",
+    "fuse-bindings": "^2.8.1",
+    "request": "2.69.0"
   }
 }

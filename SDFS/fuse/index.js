@@ -1,6 +1,9 @@
+import readdir from './operations/readdir'
+
 let ops = {}
 
-ops.options = ['direct_io', 'dev', 'debug']
+// ops.options = ['direct_io', 'dev', 'debug']
+ops.options = ['direct_io']
 
 ops.init = function(cb) {
   console.log('init is not implementation')
@@ -70,10 +73,7 @@ ops.fsyncdir = function(path, fd, datasync, cb) {
   cb(0)
 }
 
-ops.readdir = function(path, cb) {
-  console.log('readdir is not implementation')
-  cb(0, ['file.txt', 'dir'])
-}
+ops.readdir = readdir()
 
 ops.truncate = function(path, size, cb) {
   console.log('truncate is not implementation')
