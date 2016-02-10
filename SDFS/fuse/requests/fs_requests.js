@@ -23,7 +23,9 @@ export class FS_Request {
       request(ops, (err, res, body) => {
         if(err) return reject(err)
         if(res.statusCode !== 200) return reject(new Error(body.message))
-        if() return reject(new Error('Target is not a directory'))
+
+        // because of the request module, response headers must be underscored.
+        if(res.headers['x-file-type'] !== 'directory') return reject(new Error('Target is not a directory'))
         return resolve(body.data)
       })
     })
