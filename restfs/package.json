@@ -25,6 +25,7 @@
     "bluebird": "3.2.2",
     "body-parser": "1.14.2",
     "express": "4.13.4",
+    "mkdirp": "0.5.1",
     "pump": "1.0.1"
   }
 }

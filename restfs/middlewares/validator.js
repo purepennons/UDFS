@@ -23,6 +23,10 @@ function typeValidator(req, res, next) {
     console.log('type: ', req.type)
     console.log('stat', req.stat)
 
+    // set response header
+    // in order to check response type, set header: 'X-File-Type'
+    res.set('X-File-Type', req.type)
+
     return next()
   })
 }

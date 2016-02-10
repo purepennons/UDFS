@@ -2,6 +2,7 @@
 
 import path from 'path'
 import pump from 'pump'
+import mkdirp from 'mkdirp'
 import express from 'express'
 import Promise from 'bluebird'
 
@@ -12,6 +13,7 @@ router.get('/', (req, res, next) => {
   // field: ['metadata', 'stat', 'type', 'path', 'mount_path', 'content', 'filename', 'size', 'list_only']
   let field = req.query.field
   // no field => always return stat, path, mount_path and type
+
   let result = {
     name: req.filename,
     path: req.file_path,
@@ -29,13 +31,16 @@ router.get('/', (req, res, next) => {
   }
 
   if(req.type === 'file') {
-
     async function getContent() {
       try {
         // return the file
         // only return the content when 'content' field is in the field prop.
         if(field.indexOf('content') > -1) {
           res.set('Content-Length', req.stat.size)
+          // if assign the range, it will only return the part of the content of the file.
+          /**
+           * TODO: partial return
+           */
           pump(fs.createReadStream(req.file_path), res)
         } else {
           // filter fields
@@ -107,6 +112,10 @@ router.get('/', (req, res, next) => {
       return next(catchError)
     })
   }
+
+})
+
+router.post('/', (req, res, next) => {
 
 })
 
