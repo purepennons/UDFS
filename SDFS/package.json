@@ -5,8 +5,9 @@
   "main": "entry.js",
   "scripts": {
     "test": "./node_modules/.bin/mocha --compilers js:babel-core/register",
+    "start": "node entry.js",
     "stop": "sh ./script/stop.sh",
-    "start": "sh ./script/restart.sh"
+    "restart": "sh ./script/restart.sh"
   },
   "author": "Chiahao Lin",
   "repository": {

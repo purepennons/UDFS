@@ -1,11 +1,11 @@
 import fuse from 'fuse-bindings'
 
-export default function readdir(root) {
+export default function readdir(root, REQ) {
   return (route, cb) => {
     if (!/\/$/.test(route)) route += '/'
     console.log('readdir of route', route)
 
-    global.REQ.readdir(route).then( list => {
+    REQ.readdir(route).then( list => {
       console.log(list);
       cb(0, list)
     })

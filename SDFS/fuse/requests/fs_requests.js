@@ -1,12 +1,20 @@
+"use strict"
+
 import url from 'url'
 import Promise from 'bluebird'
 import request from 'request'
 
-export class FS_Request {
-  constructor(root, read_dest, write_dest) {
+class FS_REQ {
+  constructor(root='/', read_dest, write_dest) {
+    if(!root || !read_dest || !write_dest) {
+      console.error('Params of constructor can not be null.')
+      throw new Error('Without params of constructor')
+    }
+
     this.root = root
     this.read_dest = read_dest
     this.write_dest = write_dest
+    // this.rootStat = this.getRootStat(this.root)
   }
 
   readdir(route) {
@@ -49,3 +57,5 @@ export class FS_Request {
   }
 
 }
+
+export default FS_REQ
