@@ -17,6 +17,11 @@ function typeValidator(req, res, next) {
     }
 
     req.filename = path.basename(req.file_path)
+
+    // force time format to CST
+    st.mtime = st.mtime.toString()
+    st.atime = st.atime.toString()
+    st.ctime = st.ctime.toString()
     req.stat = st
 
     console.log('filename', req.filename)
