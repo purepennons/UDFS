@@ -30,4 +30,22 @@ export class FS_Request {
       })
     })
   }
+
+  statfs(route) {
+    let ops = {
+      method: 'GET',
+      uri: url.resolve(this.read_dest, route),
+      qs: {},
+      json: true
+    }
+
+    return new Promise( (resolve, reject) => {
+      request(ops, (err, res, body) => {
+        if(err) return reject(err)
+        if(res.statusCode !== 200) return reject(new Error(body.message))
+        return resolve(body.data)
+      })
+    })
+  }
+
 }
