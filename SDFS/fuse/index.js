@@ -6,6 +6,8 @@ import FS_REQ from './requests/fs_requests'
 // fuse callbacks
 import readdir from './operations/readdir'
 import statfs from './operations/statfs'
+import getattr from './operations/getattr'
+
 
 class SDFS extends FS_REQ {
 
@@ -85,47 +87,48 @@ class SDFS extends FS_REQ {
 
     // ops.statfs = statfs(root)
     ops.statfs = function (path, cb) {
-    console.log('statfs is not implementation')
-    cb(0, {
-      bsize: 1000000,
-      frsize: 1000000,
-      blocks: 1000000,
-      bfree: 1000000,
-      bavail: 1000000,
-      files: 1000000,
-      ffree: 1000000,
-      favail: 1000000,
-      fsid: 1000000,
-      flag: 1000000,
-      namemax: 1000000
-    })
-  }
-
-    ops.getattr = function(path, cb) {
-      console.log('getattr is not implementation')
+      console.log('statfs is not implementation')
       cb(0, {
-        mtime: new Date(),
-        atime: new Date(),
-        ctime: new Date(),
-        size: 100,
-        mode: 16877,
-        uid: 1000000,
-        gid: 1000000
+        bsize: 1000000,
+        frsize: 1000000,
+        blocks: 1000000,
+        bfree: 1000000,
+        bavail: 1000000,
+        files: 1000000,
+        ffree: 1000000,
+        favail: 1000000,
+        fsid: 1000000,
+        flag: 1000000,
+        namemax: 1000000
       })
     }
 
-    ops.fgetattr = function(path, fd, cb) {
-      console.log('fgetattr is not implementation')
-      cb(0, {
-        mtime: new Date(),
-        atime: new Date(),
-        ctime: new Date(),
-        size: 100,
-        mode: 16877,
-        uid: 1000000,
-        gid: 1000000
-      })
-    }
+    ops.getattr = getattr(root, FS_REQ, fuse_ops)
+    // ops.getattr = function (path, cb) {
+    //   console.log('getattr is not implementation', path)
+    //   cb(0, {
+    //     mtime: new Date(),
+    //     atime: new Date(),
+    //     ctime: new Date(),
+    //     size: 100,
+    //     mode: 16877,
+    //     uid: process.getuid(),
+    //     gid: process.getgid()
+    //   })
+    // }
+
+    // ops.fgetattr = function(path, fd, cb) {
+    //   console.log('fgetattr is not implementation')
+    //   cb(0, {
+    //     mtime: new Date(),
+    //     atime: new Date(),
+    //     ctime: new Date(),
+    //     size: 100,
+    //     mode: 16877,
+    //     uid: 1000000,
+    //     gid: 1000000
+    //   })
+    // }
 
     ops.flush = function(path, fd, cb) {
       console.log('flush is not implementation')
@@ -142,7 +145,7 @@ class SDFS extends FS_REQ {
       cb(0)
     }
 
-    ops.readdir = readdir(root, FS_REQ)
+    ops.readdir = readdir(root, FS_REQ, fuse_ops)
 
     ops.truncate = function(path, size, cb) {
       console.log('truncate is not implementation')

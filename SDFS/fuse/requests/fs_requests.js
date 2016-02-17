@@ -39,7 +39,7 @@ class FS_REQ {
     })
   }
 
-  statfs(route) {
+  getStat(route) {
     let ops = {
       method: 'GET',
       uri: url.resolve(this.read_dest, route),
@@ -51,7 +51,7 @@ class FS_REQ {
       request(ops, (err, res, body) => {
         if(err) return reject(err)
         if(res.statusCode !== 200) return reject(new Error(body.message))
-        return resolve(body.data)
+        return resolve(body.data[0].stat)
       })
     })
   }
