@@ -7,7 +7,7 @@ export default function readdir(root, REQ, ops) {
 
     REQ.readdir(route).then( list => {
       console.log(list);
-      cb(0, list)
+      cb(0, list.concat(['.', '..']))
     })
     .catch(err => {
       console.error(err.stack)

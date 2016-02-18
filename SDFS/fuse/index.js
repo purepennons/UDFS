@@ -104,19 +104,7 @@ class SDFS extends FS_REQ {
     }
 
     ops.getattr = getattr(root, FS_REQ, fuse_ops)
-    // ops.getattr = function (path, cb) {
-    //   console.log('getattr is not implementation', path)
-    //   cb(0, {
-    //     mtime: new Date(),
-    //     atime: new Date(),
-    //     ctime: new Date(),
-    //     size: 100,
-    //     mode: 16877,
-    //     uid: process.getuid(),
-    //     gid: process.getgid()
-    //   })
-    // }
-
+    
     // ops.fgetattr = function(path, fd, cb) {
     //   console.log('fgetattr is not implementation')
     //   cb(0, {
