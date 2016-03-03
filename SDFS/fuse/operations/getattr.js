@@ -26,7 +26,7 @@ export default function getattr(root, REQ, ops) {
 
     // runner
     getAttr().then( stat => {
-      console.log('stat:', stat)
+      // console.log('stat:', stat)
       return cb(0, stat)
     }).catch(err => {
       console.error(err.stack)

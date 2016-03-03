@@ -31,23 +31,6 @@ class SDFS extends FS_REQ {
     // this.REQ = new FS_REQ(this.root, this.read_dest, this.write_dest)
   }
 
-  // set/get variables
-  setReadDest(read_dest) {
-    if(read_dest) {
-      this.read_dest = read_dest
-      return true
-    }
-    return false
-  }
-
-  setWriteDest(write_dest) {
-    if(write_dest) {
-      this.write_dest = write_dest
-      return true
-    }
-    return false
-  }
-
   // mount fuse
   mount() {
     return new Promise( (resolve, reject) => {
@@ -104,19 +87,19 @@ class SDFS extends FS_REQ {
     }
 
     ops.getattr = getattr(root, FS_REQ, fuse_ops)
-    
-    // ops.fgetattr = function(path, fd, cb) {
-    //   console.log('fgetattr is not implementation')
-    //   cb(0, {
-    //     mtime: new Date(),
-    //     atime: new Date(),
-    //     ctime: new Date(),
-    //     size: 100,
-    //     mode: 16877,
-    //     uid: 1000000,
-    //     gid: 1000000
-    //   })
-    // }
+
+    ops.fgetattr = function(path, fd, cb) {
+      console.log('fgetattr is not implementation, path = %s, fd = %s', path, fd)
+      cb(0, {
+        mtime: new Date(),
+        atime: new Date(),
+        ctime: new Date(),
+        size: 100,
+        mode: 16877,
+        uid: 1000000,
+        gid: 1000000
+      })
+    }
 
     ops.flush = function(path, fd, cb) {
       console.log('flush is not implementation')
@@ -182,7 +165,7 @@ class SDFS extends FS_REQ {
     //   return 'r+'
     // }
     ops.open = function(path, flags, cb) {
-      console.log('open is not implementation')
+      console.log('open is not implementation, path = %s, flag = %s', path, flags)
       cb(0, 42) // 42 is a file descriptor
     }
 
@@ -192,7 +175,7 @@ class SDFS extends FS_REQ {
     }
 
     ops.read = function(path, fd, buffer, length, position, cb) {
-      console.log('read is not implementation')
+      console.log('read is not implementation, path = %s, fd = %s', path, fd)
       // part is a buffer for content
       //part.copy(buffer) // write the result of the read to the result buffer
       cb(100) // return the number of bytes read
@@ -215,7 +198,7 @@ class SDFS extends FS_REQ {
     }
 
     ops.create = function(path, mode, cb) {
-      console.log('create is not implementation')
+      console.log('create is not implementation, path = %s, mode = %s', path, mode)
       cb(0)
     }
 
@@ -245,7 +228,7 @@ class SDFS extends FS_REQ {
     }
 
     ops.mkdir = function(path, mode, cb) {
-      console.log('mkdir is not implementation')
+      console.log('mkdir is not implementation, path = %s, mode = %s', path, mode)
       cb(0)
     }
 

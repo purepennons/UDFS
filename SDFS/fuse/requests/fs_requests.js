@@ -17,6 +17,24 @@ class FS_REQ {
     // this.rootStat = this.getRootStat(this.root)
   }
 
+  // set/get variables
+  setReadDest(read_dest) {
+    if(read_dest) {
+      this.read_dest = read_dest
+      return true
+    }
+    return false
+  }
+
+  setWriteDest(write_dest) {
+    if(write_dest) {
+      this.write_dest = write_dest
+      return true
+    }
+    return false
+  }
+
+
   readdir(route) {
     let ops = {
       method: 'GET',
