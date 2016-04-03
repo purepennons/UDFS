@@ -1,0 +1,37 @@
+{
+  "name": "sdfs",
+  "version": "0.0.1",
+  "description": "Software Defined File System",
+  "main": "./bin/boot.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --compilers js:babel-core/register",
+    "start": "node ./bin/boot.js",
+    "stop": "sh ./script/stop.sh",
+    "restart": "sh ./script/restart.sh"
+  },
+  "author": "Chiahao Lin",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purepennons/thesis.git"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "babel-core": "^6.4.5",
+    "babel-polyfill": "^6.3.14",
+    "babel-preset-es2015": "^6.3.13",
+    "babel-preset-stage-0": "^6.3.13",
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5"
+  },
+  "dependencies": {
+    "bluebird": "^3.2.2",
+    "body-parser": "^1.14.2",
+    "express": "^4.13.4",
+    "fuse-bindings": "^2.8.1",
+    "level-blobs": "^0.1.7",
+    "level-sublevel": "^6.5.4",
+    "leveldown": "^1.4.4",
+    "levelup": "^1.3.1",
+    "request": "^2.69.0"
+  }
+}
