@@ -1,4 +1,13 @@
-FROM alpine:3.3
+FROM centos:7
 MAINTAINER Chiahao Lin <chiahao.node@gmail.com>
 
-RUN apk add --update --no-cache git curl wget tar make gcc python g++ linux-headers libgcc libstdc++ binutils-gold fuse pkgconfig fuse-dev nodejs bash
+RUN yum update -y
+
+RUN yum groupinstall -y 'Development Tools'
+
+RUN yum install -y git gcc curl wget tar vim make libstdc++-devel gcc-c++ fuse fuse-devel curl-devel libxml2-devel mailcap
+
+RUN curl --silent --location https://rpm.nodesource.com/setup_4.x | bash -
+RUN yum -y install nodejs
+
+RUN npm install -g npm@latest
