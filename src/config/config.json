@@ -1,0 +1,11 @@
+{
+  "db": {
+    "path": "./data/db/",
+    "options": {
+      "createIfMissing": true,
+      "errorIfExists": false,
+      "compression": true,
+      "cacheSize": 8388608
+    }
+  }
+}
