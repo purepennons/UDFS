@@ -1,6 +1,6 @@
 {
   "db": {
-    "path": "./data/db/",
+    "path": "/data/db/leveldb",
     "options": {
       "createIfMissing": true,
       "errorIfExists": false,
