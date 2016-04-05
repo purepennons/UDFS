@@ -7,5 +7,10 @@
       "compression": true,
       "cacheSize": 8388608
     }
+  },
+  "fuse": {
+    "name": "main",
+    "mnt": "./mnt",
+    "options": [ "direct_io" ]
   }
 }
