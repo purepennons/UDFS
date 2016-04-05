@@ -1,28 +1,24 @@
 "use strict"
 
-const levelup = require('levelup')
-const path = require('path')
 const config = require('./config/config.json')
+const SecureDB = require('./secure_db/index')
 
 // initial
 try {
 
   // db setting
-  let db_path = config.db.path || './data/db'
-  let db_options = config.db.options || {
-    "createIfMissing": true,
-    "errorIfExists": false,
-    "compression": true,
-    "cacheSize": 8*1024*1024
-  }
+  let db_location = config.db.location || './data/db'
+  let db_options = config.db.options
 
-  // connect to leveldb
-  let db = levelup(path.resolve(db_path))
+  // connect to db
+  // db.db is the instance of leveldb
+  let db = new SecureDB(db_location, db_options)
 
 } catch(err) {
   console.error('Initialization failed', err)
 
-  // cleanup
-
-  process.exit(1)
 }
+
+process.on('exit', ()=> {
+  // cleanup
+})
