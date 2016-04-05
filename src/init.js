@@ -40,6 +40,7 @@ async function init() {
 
 // exit handler
 function cleanup() {
+  if(db) db.db.close()
   if(ufs) ufs.unmount()
   return
 }
