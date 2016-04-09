@@ -4,6 +4,8 @@ class Stat {
 
   // define the metadata of basic file
   constructor(stat) {
+    if(!stat) throw new Error('Without a file stat.')
+
     // basic stat
     this.uid = stat.uid || 0
   	this.gid = stat.gid || 0
@@ -28,6 +30,34 @@ class Stat {
     this.blob = stat.blob  // not used, save binary
   }
 
+  isDirectory() {
+    return this.type === 'directory'
+  }
+
+  isFile() {
+    return this.type === 'file'
+  }
+
+  isBlockDevice() {
+  	return false
+  }
+
+  isCharacterDevice() {
+  	return false
+  }
+
+  isSymbolicLink() {
+  	// return this.type === 'symlink'
+  	return false
+  }
+
+  isFIFO() {
+  	return false
+  }
+
+  isSocket() {
+  	return false
+  }
 
 }
 

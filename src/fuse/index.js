@@ -16,6 +16,7 @@ class UserspaceFS {
 
     // IO operations must be injected the db instance
     this.io = new IO(this.db)
+
   }
 
   // mount fuse
