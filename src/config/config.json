@@ -11,6 +11,6 @@
   "fuse": {
     "name": "main",
     "mnt": "./mnt",
-    "options": [ "direct_io" ]
+    "options": [ "direct_io", "debug", "dev" ]
   }
 }

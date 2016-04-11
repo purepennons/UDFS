@@ -24,6 +24,7 @@ class Stat {
     this.blocks = stat.blocks // not used
 
     // custom stat
+    this.file_id = stat.file_id
   	this.type = stat.type // file or directory
     this.status = stat.status || true // set true when the file is allowed to access
 

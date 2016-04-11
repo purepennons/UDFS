@@ -1,6 +1,7 @@
 "use strict"
 
 const levelup = require('levelup')
+const sub = require('subleveldown')
 const path = require('path')
 
 class SecureDB {
@@ -14,7 +15,9 @@ class SecureDB {
       "cacheSize": 8*1024*1024
     }
 
+    // db level defined
     this.db = levelup(path.resolve(this.location))
+    this.fileMetadata = sub(this.db, 'fileMetadata')
   }
 }
 
