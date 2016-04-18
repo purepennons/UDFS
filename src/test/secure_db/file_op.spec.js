@@ -4,6 +4,7 @@ const test = require('tape')
 const util = require('util')
 const fs = require('fs-extra')
 const octal = require('octal')
+const Promise = require('bluebird')
 
 const levelup = require('levelup')
 
@@ -12,12 +13,17 @@ const stat = require('../../lib/stat')
 
 const db_path = '/tmp/leveldb/testing/file_op'
 
+
 // setup
 fs.removeSync(db_path)
 fs.mkdirpSync(db_path)
 
 let db = levelup(db_path)
 let ops = file_ops(db)
+
+// promisify
+ops.getAsync = Promise.promisify(ops.get)
+ops.putAsync = Promise.promisify(ops.put)
 
 const root = '/'
 const notExist = '/notExist'
@@ -111,8 +117,32 @@ test('create a new file or directory', assert => {
       })
     })
   })
+  assert.end()
+})
 
+// get list
+test('get file list from a folder', assert => {
+  const parent = '/list'
+  const fileList = ['a', 'b', 'c', 'd', 'directory']
 
+  // setup
+  // create a folder named list
+  ops.putAsync(parent, folder)
+  .then(key => {
+    return Promise.map(fileList, file => {
+      if(file === 'directory') return ops.putAsync(`${parent}/${file}`, folder)
+      return ops.putAsync(`${parent}/${file}`, file)
+    })
+  })
+  .then(key => {
+    // start to test
+    ops.getList(parent, (err, files) => {
+      assert.same(files, fileList, 'The filenames from path "/list" are all correct')
+    })
+  })
+  .catch(err => {
+    assert.error(err, 'Setup failed')
+  })
 
   assert.end()
 })

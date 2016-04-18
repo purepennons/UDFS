@@ -4,6 +4,7 @@ const debug = require('debug')('file_op')
 const once = require('once')
 const octal = require('octal')
 const path = require('path')
+const concat = require('concat-stream')
 
 const n = require('../../lib/path')
 const stat = require('../../lib/stat')
@@ -36,19 +37,34 @@ module.exports = function(db) {
 
   }
 
-  ops.getList = function() {
+  ops.getList = function(key, cb) {
+    cb = once(cb)
 
+    key = n.normalize(key)
+
+    let start = n.prefix(key === '/' ? key : key + '/')
+    let keys = db.createKeyStream({
+      gt: start,
+      lt: start + '\xff'
+    })
+
+    keys
+    .pipe(concat({encoding:'object'}, files => {
+      files = files.map(file => file.split('/').pop())
+      cb(null, files)
+    }))
+    .on('error', cb)
   }
 
 
-    /**
-     * cb(child_dir)
-     */
-    ops.travelDir = function(dir, cb) {
-      if(dir === '/') return cb(dir)
-      cb(dir)
-      return this.travelDir( path.dirname(dir), cb )
-    }
+  /**
+   * cb(child_dir)
+   */
+  ops.travelDir = function(dir, cb) {
+    if(dir === '/') return cb(dir)
+    cb(dir)
+    return this.travelDir( path.dirname(dir), cb )
+  }
 
   /**
    * cb(err, key)

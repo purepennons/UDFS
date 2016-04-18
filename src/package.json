@@ -27,6 +27,7 @@
   "dependencies": {
     "bluebird": "^3.2.2",
     "body-parser": "^1.14.2",
+    "concat-stream": "^1.5.1",
     "debug": "^2.2.0",
     "errno": "^0.1.4",
     "express": "^4.13.4",
