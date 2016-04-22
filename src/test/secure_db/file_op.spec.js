@@ -8,10 +8,10 @@ const Promise = require('bluebird')
 
 const levelup = require('levelup')
 
-const file_ops = require('../../secure_db/operations/file_op')
+const file_metadata_ops = require('../../secure_db/operations/file_metadata_ops')
 const stat = require('../../lib/stat')
 
-const db_path = '/tmp/leveldb/testing/file_op'
+const db_path = '/tmp/leveldb/testing/file_metadata_ops'
 
 
 // setup
@@ -19,7 +19,7 @@ fs.removeSync(db_path)
 fs.mkdirpSync(db_path)
 
 let db = levelup(db_path)
-let ops = file_ops(db)
+let ops = file_metadata_ops(db)
 
 // promisify
 ops.getAsync = Promise.promisify(ops.get)
@@ -122,10 +122,24 @@ test('create a new file or directory', assert => {
 
 // get list
 test('get file list from a folder', assert => {
+  const emptyParent = '/empty'
   const parent = '/list'
   const fileList = ['a', 'b', 'c', 'd', 'directory']
 
   // setup
+  // empty folder
+  ops.putAsync(emptyParent, folder)
+  .then(key => {
+    // get a list from an empty folder
+    ops.getList(emptyParent, (err, files) => {
+      assert.same(files, [], 'The filenames from path "/empty" are all correct')
+    })
+  })
+  .catch(err => {
+    assert.error(err, 'Setup failed')
+  })
+
+  // list
   // create a folder named list
   ops.putAsync(parent, folder)
   .then(key => {
@@ -135,7 +149,7 @@ test('get file list from a folder', assert => {
     })
   })
   .then(key => {
-    // start to test
+    // get a list from "list" folder
     ops.getList(parent, (err, files) => {
       assert.same(files, fileList, 'The filenames from path "/list" are all correct')
     })

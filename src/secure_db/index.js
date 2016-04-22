@@ -17,7 +17,9 @@ class SecureDB {
 
     // db level defined
     this.db = levelup(path.resolve(this.location))
+    this.storageMetadata = sub(this.db, 'storageMetadata')
     this.fileMetadata = sub(this.db, 'fileMetadata')
+    this.files = sub(this.db, 'files')
   }
 }
 

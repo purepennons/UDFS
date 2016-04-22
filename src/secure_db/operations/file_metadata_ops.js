@@ -33,10 +33,6 @@ module.exports = function(db) {
     })
   }
 
-  ops.getDetail = function() {
-
-  }
-
   ops.getList = function(key, cb) {
     cb = once(cb)
 
