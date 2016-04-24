@@ -1,6 +1,6 @@
 "use strict"
 
-const debug = require('debug')('file_op')
+const debug = require('debug')('file_metadata_ops')
 const once = require('once')
 const octal = require('octal')
 const path = require('path')
@@ -12,8 +12,10 @@ const errno = require('../../lib/errno')
 
 const ROOT = stat({
 	type: 'directory',
-	mode: octal(777),
-	size: 4096
+	mode: octal(40755),
+	size: 4096,
+  uid: process.getuid(),
+  gid: process.getgid()
 })
 
 module.exports = function(db) {
@@ -33,6 +35,9 @@ module.exports = function(db) {
     })
   }
 
+  /**
+   * cb(err, files)
+   */
   ops.getList = function(key, cb) {
     cb = once(cb)
 

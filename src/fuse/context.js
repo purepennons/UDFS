@@ -5,6 +5,8 @@ const fuse = require('fuse-bindings')
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
 const files_ops = require('../secure_db/operations/files_ops')
 
+// const stat = require('../lib/stat')
+
 
 let ENOENT = new Error('ENOENT')
 ENOENT.code = 'ENOENT'
@@ -22,8 +24,27 @@ exports.getMainContext = function(root, db, io, options) {
   // ops.options = ['direct_io', 'dev', 'debug']
   ops.options = options.options || []
 
-  ops.readdir = function(path, cb) {
+  // param: "key" === "path"
 
+  ops.getattr = function(key, cb) {
+    debug('getattr = %s', key)
+    fm_ops.get(key, (err, s, k) => {
+      if(err) return cb(fuse[err.code])
+      debug('stat', s)
+      return cb(0, s)
+    })
+  }
+
+
+  // ops.fgetattr = function(key, fd, cb) {
+  //
+  // }
+
+  ops.readdir = function(key, cb) {
+    fm_ops.getList(key, (err, files) => {
+      if(err) return cb(fuse[err.code])
+      return cb(0, files.concat(['.', '..']))
+    })
   }
 
   return ops

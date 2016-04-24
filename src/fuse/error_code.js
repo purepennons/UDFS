@@ -1,3 +1,13 @@
+// #define S_IFMT 0170000 /* type of file ，文件類型掩碼 */
+// #define S_IFREG 0100000 /* regular 普通文件 */
+// #define S_IFBLK 0060000 /* block special 塊設備文件 */
+// #define S_IFDIR 0040000 /* directory 目錄文件 */
+// #define S_IFCHR 0020000 /* character special 字符設備文件 */
+// #define S_IFIFO 0010000 /* fifo */
+// #define S_IFNAM 0050000 /* special named file */
+// #if !defined(_M_XOUT)
+// #define S_IFLNK 0120000 /* symbolic link 鏈接文件 */
+
 var PosixError = {
     //https://github.com/torvalds/linux/blob/master/include/asm-generic/errno-base.h
     EPERM               : 1,/* Operation not permitted */
