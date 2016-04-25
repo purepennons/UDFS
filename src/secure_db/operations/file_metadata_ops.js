@@ -114,12 +114,16 @@ module.exports = function(db) {
   ops.put = function(key, data, cb) {
     ops.writable(key, err => {
       if(err) return cb(err, key)
-      return db.put(n.prefix(key), data, {valueEncoding: 'json'}, err => {
+      return db.put(n.prefix(key), data, {valueEncoding: 'json', sync: true}, err => {
         if(err) return cb(err, key)
         return cb(null, key)
       })
     })
   }
+
+	ops.update = function(key, data, cb) {
+		
+	}
 
   ops.del = function(key, cb) {
 
