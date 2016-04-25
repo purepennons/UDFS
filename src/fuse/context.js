@@ -16,8 +16,10 @@ const files_ops = require('../secure_db/operations/files_ops')
 fs.openAsync = Promise.promisify(fs.open)
 
 // global values in the scope
-// const FD_MAX = 65535
+const FD_MAX = 65535
 const ENOENT = -2
+
+let fd_count = 0
 
 
 exports.getMainContext = function(root, db, io, options) {
@@ -69,6 +71,7 @@ exports.getMainContext = function(root, db, io, options) {
   ops.open = function(key, flag, cb) {
     debug('open = %s, flag = %s', key, flag)
 
+    if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
     fm_ops.get(key, (err, s, k) => {
       if(err) return cb(fuse[err.code])
       debug('stat', s)
@@ -78,25 +81,39 @@ exports.getMainContext = function(root, db, io, options) {
         stat: s
       }
 
-      // get a unique fd
-      // "./fd/fd" is a dummy file to generate a file descriptor
-      fs.openAsync('./fd/fd', flag)
-      .then(fd => {
-        debug(`${key} -> fd =`, fd)
+      // genUniqueKeyFromMap need to upgrad the algorithm
+      // or it will process too much time to generate the fd number
+      let fd = lib.genUniqueKeyFromMap(fd_map, fd_count, FD_MAX)
+      debug(`${key} -> fd =`, fd)
 
-        // record the fd mapping
-        fd_map.set(fd, opened_file)
-        cb(0, fd)
-      })
-      .catch(err => {
-        cb(fuse['ENOMEM'])
-      })
+      fd_map.set(fd, opened_file)
+      fd_count++
+      return cb(0, fd)
+
+      // // get a unique fd
+      // // "./fd/fd" is a dummy file to generate a file descriptor
+      // fs.openAsync('/src/src/fuse/fd', flag)
+      // .then(fd => {
+      //   debug(`${key} -> fd =`, fd)
+      //
+      //   // record the fd mapping
+      //   fd_map.set(fd, opened_file)
+      //   fd_count++
+      //   cb(0, fd)
+      // })
+      // .catch(err => {
+      //   console.log(err)
+      //   cb(fuse['ENOMEM'])
+      // })
     })
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
     debug('read = %s, fd = %s, len = %s, offset = %s', key, fd, len, offset)
-    return cb(0, 0)
+
+    // let str = 'hello world'
+    // buf.write(str)
+    // return cb(str.length))
   }
 
   ops.readdir = function(key, cb) {
