@@ -57,8 +57,11 @@ exports.getMainContext = function(root, db, io, options) {
   ops.fgetattr = function(key, fd, cb) {
     debug('fgetattr = %s, fd = %s', key, fd)
 
-    if(!fd_map.has(fd)) return ops.getattr(key, cb)
-    return cb(0, fd_map.get(fd).stat)
+    // this is the faster way, but the stat may be not sync.
+    // if(!fd_map.has(fd)) return ops.getattr(key, cb)
+    // return cb(0, fd_map.get(fd).stat)
+
+    return ops.getattr(key, cb)
   }
 
   ops.open = function(key, flag, cb) {
@@ -70,8 +73,10 @@ exports.getMainContext = function(root, db, io, options) {
       debug('stat', s)
 
       let opened_file = {
+        path: key,
         flag: flag,
-        stat: s
+        // file_id?
+        stat: s // maybe not sync, if it is accessed parallel
       }
 
       // genUniqueKeyFromMap need to upgrad the algorithm
@@ -101,13 +106,28 @@ exports.getMainContext = function(root, db, io, options) {
     })
   }
 
+  ops.release = function(key, fd, cb) {
+    function clearup() {
+      fd_map.delete(fd)
+      fd_count--
+      return
+    }
+
+    if(fd) clearup()
+    return cb(0)
+  }
+
   ops.read = function(key, fd, buf, len, offset, cb) {
     debug('read = %s, fd = %s, len = %s, offset = %s', key, fd, len, offset)
-
+    return cb(0)
     // let str = 'hello world'
     // buf.write(str)
     // return cb(str.length))
   }
+
+  // ops.write = function() {
+  //   // maybe need to set status of file to true
+  // }
 
   ops.readdir = function(key, cb) {
     debug('readdir = %s', key)
