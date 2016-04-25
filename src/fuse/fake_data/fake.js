@@ -24,9 +24,9 @@ const ROOT = {
 }
 
 const folder = {
-  uid: 1000,
-  gid: 1000,
-  mode: octal(777),
+  uid: process.getuid(),
+  gid: process.getgid(),
+  mode: octal(40755),
   size: 4096,
   type: 'directory',
   status: true,
@@ -34,9 +34,9 @@ const folder = {
 }
 
 const file = {
-  uid: 1000,
-  gid: 1000,
-  mode: octal(777),
+  uid: process.getuid(),
+  gid: process.getgid(),
+  mode: octal(100755),
   size: 4096,
   type: 'file',
   status: true,
@@ -48,7 +48,11 @@ let cb = function(err, key) {
   return console.log(key)
 }
 
-fm_ops.put('/test', folder, cb)
+fm_ops.put('/test', folder, (err, key) => {
+  fm_ops.put('/test/1.txt', file, cb)
+  fm_ops.put('/test/2.txt', file, cb)
+  fm_ops.put('/test/3.txt', file, cb)
+})
 fm_ops.put('/a.txt', file, cb)
 fm_ops.put('/b.txt', file, cb)
 fm_ops.put('/c.txt', file, cb)
