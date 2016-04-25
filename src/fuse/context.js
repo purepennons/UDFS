@@ -57,15 +57,8 @@ exports.getMainContext = function(root, db, io, options) {
   ops.fgetattr = function(key, fd, cb) {
     debug('fgetattr = %s, fd = %s', key, fd)
 
-    cb(0, {
-      mtime: new Date(),
-      atime: new Date(),
-      ctime: new Date(),
-      size: 100,
-      mode: 16877,
-      uid: process.getuid(),
-      gid: process.getgid()
-    })
+    if(!fd_map.has(fd)) return ops.getattr(key, cb)
+    return cb(0, fd_map.get(fd).stat)
   }
 
   ops.open = function(key, flag, cb) {
