@@ -89,6 +89,12 @@ test('create a new file or directory', assert => {
   // create "/a" folder
   ops.put(parent_folder_path, folder, (err, key) => {
     assert.equal(err, null, `key = ${key}`)
+
+		// create "/a" folder again
+		ops.put(parent_folder_path, folder, (err, key) => {
+			assert.equal(err.code, 'EEXIST', `path ${key} exist. Recreate failed.`)
+		})
+
     ops.get(key, (err, s, k) => {
       assert.equal(err, null, `key = ${k}, stat = ${util.inspect(s, false, null)}`)
       assert.equal(s.type, 'directory', `path ${key} is a directory.`)

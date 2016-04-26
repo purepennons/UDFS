@@ -75,13 +75,30 @@ module.exports = function(db) {
 
     if(key === '/') return process.nextTick( cb.bind(null, errno.EPERM(key)) )
 
-    // check the parent folder is exist or not.
-    ops.checkParents(path.dirname(key), (err, s, k) => {
-      if(err) return cb(err)
-      if(!s.isDirectory()) return cb(errno.ENOTDIR(key))
-      cb(null, key)
-    })
+		// check the file exist or not
+		ops.checkNotExist(key, err => {
+			if(err) return cb(err, key)
+
+			// check the parent folder is exist or not.
+			ops.checkParents(path.dirname(key), (err, s, k) => {
+				if(err) return cb(err)
+				if(!s.isDirectory()) return cb(errno.ENOTDIR(key))
+				cb(null, key)
+			})
+		})
   }
+
+	/**
+	 * cb(err, key)
+	 * if err === null -> file exists
+	 */
+	ops.checkNotExist = function(key, cb) {
+		ops.get(key, (err, s, k) => {
+      if(err && err.code === 'ENOENT') return cb(null, key)
+			if(err) return cb(err, key)
+			return cb(errno.EEXIST(key), key)
+    })
+	}
 
   /**
    * cb(err, stat, key)
@@ -122,7 +139,7 @@ module.exports = function(db) {
   }
 
 	ops.update = function(key, data, cb) {
-		
+
 	}
 
   ops.del = function(key, cb) {

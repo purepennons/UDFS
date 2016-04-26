@@ -4,6 +4,7 @@ const debug = require('debug')('fuse')
 const fs = require('fs-extra')
 const fuse = require('fuse-bindings')
 const path = require('path')
+const octal = require('octal')
 const Promise = require('bluebird')
 
 const lib = require('../lib/lib')
@@ -17,6 +18,8 @@ fs.openAsync = Promise.promisify(fs.open)
 
 // global values in the scope
 const FD_MAX = 65535
+const BLOCK_SIZE = 4096
+const DIRECTORY_SIZE = BLOCK_SIZE
 const ENOENT = -2
 
 let fd_count = 0
@@ -134,6 +137,21 @@ exports.getMainContext = function(root, db, io, options) {
     fm_ops.getList(key, (err, files) => {
       if(err) return cb(fuse[err.code])
       return cb(0, files.concat(['.', '..']))
+    })
+  }
+
+  ops.mkdir = function(key, mode, cb) {
+    debug('mkdir %s, mode = %s', key, mode)
+
+    let s = {
+      mode: mode + octal(40000),  // octal(40000) means that the file is a directory
+      size: DIRECTORY_SIZE,
+      type: 'directory'
+    }
+
+    fm_ops.put(key, lib.statWrapper(s), (err, key) => {
+      if(err) return cb(fuse[err.code])
+      return cb(0)
     })
   }
 
