@@ -18,7 +18,7 @@ exports.parseFlag = function(flag) {
 // especially generates the file_id, uid, gid if they do not exist.
 // Also updates the atime
 // It will set the status to false if without the status of options
-exports.statWrapper = function(s, type, status=false, options={atimeUpdate: true}) {
+exports.statWrapper = function(s, status=false, options={atimeUpdate: true}) {
   if(!s) throw new Error('without the stat param')
 
   // options pre-process
