@@ -4,14 +4,49 @@ const _ = require('lodash')
 const uuid = require('node-uuid')
 
 exports.parseFlag = function(flag) {
-  switch(flag) {
+  switch(flag & 3) {
     case 0:
-      return 'r'
+      return 'r'  // O_RDONLY, 32768 = 0100000
     case 1:
-      return 'w'
+      return 'w'  // O_WRONLY, 32769 = 0100001
     case 2:
-      return 'r+'
+      return 'r+' // O_RDWR, 32770 = 0100002, w+?
   }
+}
+
+// from node source code: https://github.com/nodejs/node/blob/a0579c0dc79aa8fab56638844f233b821a51b9e9/lib/fs.js#L552
+function stringToFlags(flag) {
+  // Return early if it's a number
+  if (typeof flag === 'number') {
+    return flag;
+  }
+
+  switch (flag) {
+    case 'r' : return O_RDONLY;
+    case 'rs' : // fall through
+    case 'sr' : return O_RDONLY | O_SYNC;
+    case 'r+' : return O_RDWR;
+    case 'rs+' : // fall through
+    case 'sr+' : return O_RDWR | O_SYNC;
+
+    case 'w' : return O_TRUNC | O_CREAT | O_WRONLY;
+    case 'wx' : // fall through
+    case 'xw' : return O_TRUNC | O_CREAT | O_WRONLY | O_EXCL;
+
+    case 'w+' : return O_TRUNC | O_CREAT | O_RDWR;
+    case 'wx+': // fall through
+    case 'xw+': return O_TRUNC | O_CREAT | O_RDWR | O_EXCL;
+
+    case 'a' : return O_APPEND | O_CREAT | O_WRONLY;
+    case 'ax' : // fall through
+    case 'xa' : return O_APPEND | O_CREAT | O_WRONLY | O_EXCL;
+
+    case 'a+' : return O_APPEND | O_CREAT | O_RDWR;
+    case 'ax+': // fall through
+    case 'xa+': return O_APPEND | O_CREAT | O_RDWR | O_EXCL;
+  }
+
+  throw new Error('Unknown file open flag: ' + flag);
 }
 
 // pre-process the stat of file before inserting
