@@ -5,6 +5,7 @@ const fs = require('fs-extra')
 const fuse = require('fuse-bindings')
 const path = require('path')
 const octal = require('octal')
+const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 
 const lib = require('../lib/lib')
@@ -78,7 +79,7 @@ exports.getMainContext = function(root, db, io, options) {
       let opened_file = {
         path: key,
         flag: flag,
-        // file_id?
+        file_id: s.file_id,
         stat: s // maybe not sync, if it is accessed parallel
       }
 
@@ -130,6 +131,7 @@ exports.getMainContext = function(root, db, io, options) {
 
   // ops.write = function() {
   //   // maybe need to set status of file to true
+  //   // first time to write, create the detail fo the file (if detial of the file not exists)
   // }
 
   ops.readdir = function(key, cb) {
@@ -149,11 +151,32 @@ exports.getMainContext = function(root, db, io, options) {
       type: 'directory'
     }
 
-    fm_ops.put(key, lib.statWrapper(s), (err, key) => {
+    fm_ops.put(key, lib.statWrapper(s, true), (err, key) => {
       if(err) return cb(fuse[err.code])
       return cb(0)
     })
   }
+
+  // ops.create = function(key, mode, cb) {
+  //   debug('create %s, mode = %s', key, mode)
+  //
+  //   // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
+  //   // ignore now
+  //   let s = {
+  //     mode: mode + octal(100000) // octal(100000) means that the file is a regular file.
+  //     size: 0,
+  //     type: 'file'
+  //   }
+  //
+  //   fm_ops.put(key, lib.statWrapper(s), (err, key) => {
+  //     if(err) return cb(fuse[err.code])
+  //     return cb(0)
+  //   })
+  // }
+
+  // ops.truncate = function(key, size, cb) {
+  //
+  // }
 
   return ops
 
