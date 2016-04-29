@@ -78,7 +78,7 @@ exports.getMainContext = function(root, db, io, options) {
 
       let opened_file = {
         path: key,
-        flag: flag,
+        flag: flag, // -1 mean it is called from ops.create
         file_id: s.file_id,
         stat: s // maybe not sync, if it is accessed parallel
       }
@@ -111,6 +111,8 @@ exports.getMainContext = function(root, db, io, options) {
   }
 
   ops.release = function(key, fd, cb) {
+    debug('release %s, fd = %s', key, fd)
+
     function clearup() {
       fd_map.delete(fd)
       fd_count--
@@ -151,28 +153,28 @@ exports.getMainContext = function(root, db, io, options) {
       type: 'directory'
     }
 
-    fm_ops.put(key, lib.statWrapper(s, true), (err, key) => {
+    fm_ops.put(key, lib.statWrapper(s, true), (err, k) => {
       if(err) return cb(fuse[err.code])
       return cb(0)
     })
   }
 
-  // ops.create = function(key, mode, cb) {
-  //   debug('create %s, mode = %s', key, mode)
-  //
-  //   // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
-  //   // ignore now
-  //   let s = {
-  //     mode: mode + octal(100000) // octal(100000) means that the file is a regular file.
-  //     size: 0,
-  //     type: 'file'
-  //   }
-  //
-  //   fm_ops.put(key, lib.statWrapper(s), (err, key) => {
-  //     if(err) return cb(fuse[err.code])
-  //     return cb(0)
-  //   })
-  // }
+  ops.create = function(key, mode, cb) {
+    debug('create %s, mode = %s', key, mode)
+
+    // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
+    // ignore now
+    let s = {
+      mode: mode,
+      size: 0,
+      type: 'file'
+    }
+
+    fm_ops.put(key, lib.statWrapper(s), (err, k) => {
+      if(err) return cb(fuse[err.code])
+      ops.open(key, -1, cb)
+    })
+  }
 
   // ops.truncate = function(key, size, cb) {
   //
