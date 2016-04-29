@@ -3,6 +3,7 @@
 const debug = require('debug')('file_metadata_ops')
 const once = require('once')
 const octal = require('octal')
+const xtend = require('xtend')
 const path = require('path')
 const concat = require('concat-stream')
 
@@ -138,12 +139,26 @@ module.exports = function(db) {
     })
   }
 
-	ops.update = function(key, data, cb) {
-
+	ops.update = function(key, modify_data, cb) {
+		ops.get(key, (err, s, key) => {
+			if(err) return cb(err, key)
+			if(key === '/') return cb(errno.EPERM(key), key)
+			return db.put(key, xtend(s, modify_data), {valueEncoding: 'json', sync: true}, err => {
+				if(err) return cb(err, key)
+        return cb(null, key)
+			})
+		})
 	}
 
   ops.del = function(key, cb) {
+		key = n.normalize(key)
 
+		if(key === '/') return process.nextTick( cb.bind(null, errno.EPERM(key)) )
+
+		return db.del(n.prefix(key), err => {
+			if(err) return cb(err, key)
+			return cb(null, key)
+		})
   }
 
   return ops
