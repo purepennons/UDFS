@@ -84,7 +84,7 @@ module.exports = function(db) {
 			ops.checkParents(path.dirname(key), (err, s, k) => {
 				if(err) return cb(err)
 				if(!s.isDirectory()) return cb(errno.ENOTDIR(key))
-				cb(null, key)
+				return cb(null, key)
 			})
 		})
   }
@@ -139,6 +139,9 @@ module.exports = function(db) {
     })
   }
 
+	/**
+	 * cb(err, key)
+	 */
 	ops.update = function(key, modify_data, cb) {
 		ops.get(key, (err, s, key) => {
 			if(err) return cb(err, key)
@@ -150,6 +153,9 @@ module.exports = function(db) {
 		})
 	}
 
+	/**
+	 * cb(err, key)
+	 */
   ops.del = function(key, cb) {
 		key = n.normalize(key)
 
