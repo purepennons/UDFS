@@ -5,6 +5,7 @@ const fs = require('fs-extra')
 const fuse = require('fuse-bindings')
 const path = require('path')
 const octal = require('octal')
+const xtend = require('xtend')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 
@@ -124,11 +125,53 @@ exports.getMainContext = function(root, db, io, options) {
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
-    debug('read = %s, fd = %s, len = %s, offset = %s', key, fd, len, offset)
-    return cb(0)
-    // let str = 'hello world'
-    // buf.write(str)
-    // return cb(str.length))
+    debug('read = %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
+
+    let f = fd_map.get(fd)
+    let s = f.stat
+
+    if(!f) return cb(fuse['ENOENT'])
+
+    // if(len > s.size - offset) len = s.size - offset
+    // 當欲讀取剩餘大小 (s.size-offset) 小於 buffer 長度，設定 buffer 長度 = 讀取剩餘大小 (s.size-offset)
+    if(s.size - offset < len) len = s.size - offset
+
+
+    if(!f.stream) {
+      // TODO:
+      // change to the real io request
+      f.stream = fs.createReadStream('/src/src/fuse/fake_data/read', {
+        start: offset
+      })
+
+      f.offset = offset
+      fd_map.set(fd, f)
+    }
+
+    // end condition
+    if(f.stream && offset === s.size) {
+      // destory the stream
+      f.stream.destroy()
+      f.stream = null
+
+      fd_map.set(fd, f)
+      cb(0)
+    }
+
+    // read the file by stream
+    // Max read size of each time is equal to the length of buffer
+    function loop() {
+      if(!f.stream) return
+
+      let result = f.stream.read(len)
+      if(!result) return f.stream.once('readable', loop)
+      result.copy(buf)
+
+      debug('result length = %s', result.length)
+      return cb(result.length)
+    }
+
+    loop()
   }
 
   // ops.write = function() {

@@ -53,7 +53,7 @@ function stringToFlags(flag) {
 // especially generates the file_id, uid, gid if they do not exist.
 // Also updates the atime
 // It will set the status to false if without the status of options
-exports.statWrapper = function(s, status=false, options={atimeUpdate: true}) {
+exports.statWrapper = function(s, status=false, options={atimeUpdate: true, mtimeUpdate: false}) {
   if(!s) throw new Error('without the stat param')
 
   // options pre-process
@@ -69,6 +69,13 @@ exports.statWrapper = function(s, status=false, options={atimeUpdate: true}) {
   if(options.atimeUpdate) s.atime = new Date()
 
   return s
+}
+
+// return a file info template
+exports.fileInfoWrapper = function(fileInfo) {
+  fileInfo.chunk_list = fileInfo.chunk_list || []
+  fileInfo.num_of_chunk = fileInfo.chunk_list.length
+  fileInfo.total_size = fileInfo.total_size || 0
 }
 
 function genUniqueKeyFromMap(m, start=0, range=65535) {
