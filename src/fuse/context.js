@@ -143,6 +143,10 @@ exports.getMainContext = function(root, db, io, options) {
       f.stream = fs.createReadStream('/src/src/fuse/fake_data/read', {
         start: offset
       })
+      .on('error', err => {
+        debug('[ERROR]-read', err.stack)
+        return cb(fuse['EIO'])
+      })
 
       f.offset = offset
       fd_map.set(fd, f)
@@ -155,13 +159,13 @@ exports.getMainContext = function(root, db, io, options) {
       f.stream = null
 
       fd_map.set(fd, f)
-      cb(0)
     }
 
     // read the file by stream
     // Max read size of each time is equal to the length of buffer
     function loop() {
-      if(!f.stream) return
+      // if the stream was cleared, end the reading operation
+      if(!f.stream) return cb(0)
 
       let result = f.stream.read(len)
       if(!result) return f.stream.once('readable', loop)
