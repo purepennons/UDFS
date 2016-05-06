@@ -10,6 +10,7 @@ const filiter = require('./middlewares/filiter')
 const config = require('./config/config.json')
 
 // routers
+let storage_router = require('./routes/storage')
 
 let app = express()
 
@@ -19,7 +20,7 @@ app.use( bodyParser.urlencoded({ extended: true }) )
 app.use ( filiter.ignoreFavicon )
 
 // routers
-
+app.use('/storage', [], storage_router)
 
 app.use( (req, res, next) => {
   let err = new Error('Not Found')
@@ -41,3 +42,5 @@ app.listen( config.port, () => {
   debug('Server is listening at %s port', config.port)
   debug('root: ', config.root)
 })
+
+module.exports = app
