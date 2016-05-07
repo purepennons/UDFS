@@ -12,14 +12,14 @@ const v1 = lib.versionWrapper('v1')
 
 // file operations
 router.get(v1('/:fs_id/:object_id'), v1_files.getFile)
-router.post(v1('/:fs_id/:object_id'), v1_files.createFile)
+router.post(v1('/:fs_id/create'), v1_files.createFile)
 router.put(v1('/:fs_id/:object_id'), v1_files.updateFile)
 router.delete(v1('/:fs_id/:object_id'), v1_files.deleteFile)
 router.head(v1('/:fs_id/:object_id'), v1_files.getHead)
 
 // file system operations
 router.get(v1('/:fs_id'), v1_fs.getFS)
-router.post(v1('/:fs_id'), v1_fs.createFS)
+router.post(v1('/create'), v1_fs.createFS)
 router.put(v1('/:fs_id'), v1_fs.updateFS)
 router.delete(v1('/:fs_id'), v1_fs.deleteFS)
 
