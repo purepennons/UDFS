@@ -125,7 +125,7 @@ exports.getMainContext = function(root, db, io, options) {
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
-    debug('read = %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
+    debug('read from %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
 
     let f = fd_map.get(fd)
     let s = f.stat
@@ -134,16 +134,25 @@ exports.getMainContext = function(root, db, io, options) {
 
     // if(len > s.size - offset) len = s.size - offset
     // 當欲讀取剩餘大小 (s.size-offset) 小於 buffer 長度，設定 buffer 長度 = 讀取剩餘大小 (s.size-offset)
-    if(s.size - offset < len) len = s.size - offset
+    if(s.size - offset < len) {
+      f.hasNext = false
+      len = s.size - offset
+    }
 
+
+    debug('f.offset = %s, offset = %s', f.offset, offset)
 
     if(!f.stream) {
       // TODO:
       // change to the real io request
-      f.stream = fs.createReadStream('/src/src/fuse/fake_data/read', {
+      f.stream = fs.createReadStream('/src/src/fuse/fake_data/test', {
         start: offset
       })
-      .on('error', err => {
+
+      // if change to other stream source, maybe need to set the encording to null(binary).
+      // f.stream.setEncoding(null)
+
+      f.stream.on('error', err => {
         debug('[ERROR]-read', err.stack)
         return cb(fuse['EIO'])
       })
@@ -153,7 +162,7 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     // end condition
-    if(f.stream && offset === s.size) {
+    if(f.stream && f.offset !== offset) {
       // destory the stream
       f.stream.destroy()
       f.stream = null
@@ -177,11 +186,6 @@ exports.getMainContext = function(root, db, io, options) {
 
     loop()
   }
-
-  // ops.write = function() {
-  //   // maybe need to set status of file to true
-  //   // first time to write, create the detail fo the file (if detial of the file not exists)
-  // }
 
   ops.readdir = function(key, cb) {
     debug('readdir = %s', key)
@@ -217,15 +221,29 @@ exports.getMainContext = function(root, db, io, options) {
       type: 'file'
     }
 
+    /**
+     * TODO: write detail of metadata to secure db
+     *
+     */
     fm_ops.put(key, lib.statWrapper(s), (err, k) => {
       if(err) return cb(fuse[err.code])
       ops.open(key, -1, cb)
     })
   }
 
-  // ops.truncate = function(key, size, cb) {
-  //
-  // }
+  ops.write = function(key, fd, buf, len, offset, cb) {
+    // maybe need to set status of file to true
+    // first time to write, create the detail fo the file (if detial of the file not exists)
+
+    debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
+    // debug('buffer', buf.toString())
+    return cb(len)
+  }
+
+  ops.truncate = function(key, size, cb) {
+    debug('truncate %s, size = %s', key, size)
+    cb(0)
+  }
 
   return ops
 
