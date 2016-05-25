@@ -9,10 +9,21 @@ const fs = Promise.promisifyAll(require('fs-extra'))
 
 const config = require('../../../config/config.json')
 
-
 const storage_path = path.join(__dirname, config.storage_path)
+
+/**
+ * url: /{fs_id}/meta/create
+ * body: {
+ *   meta: {
+ *     stat,
+ *     otherInfo
+ *   }
+ * }
+ */
 module.exports = function createMeta(req, res, next) {
   let fs_id = req.params.fs_id
+  let meta = req.body.meta || null
+  if(meta) meta = JSON.parse(meta)
 
   let storage_folder = path.resolve(path.join(storage_path, fs_id))
   debug('folder', storage_folder);
@@ -22,14 +33,15 @@ module.exports = function createMeta(req, res, next) {
     let meta_id = uuid.v4() // it is same as the object_id here. random-generation
 
     // run generator
-    createEmpty(meta_id)
-    .then(stat => {
+    createMetaAndEmpty(meta_id, meta)
+    .then(meta => {
       return res.status(201).json({
         status: 'success',
         message: 'create a empty file and its metadata',
         data: [{
+          fs_id,
           meta_id,
-          stat,
+          meta,
           object_url: `/storage/v1/${fs_id}/files/${meta_id}`
         }]
       })
@@ -42,11 +54,31 @@ module.exports = function createMeta(req, res, next) {
   })
 
   // functions
-  async function createEmpty(meta_id) {
+  async function createMetaAndEmpty(meta_id, meta) {
     try {
-      // create a empty file and response the stat
+      // create a empty file and response the metadata
+
+      // create the meta file
+      let meta_fd = await fs.openAsync(path.join(storage_folder, `${meta_id}_meta`), 'w')
+      // empty file for real data
       let fd = await fs.openAsync(path.join(storage_folder, meta_id), 'w')
-      return await fs.fstatAsync(fd)
+
+      if(meta) {
+        let metaStringify = JSON.stringify(meta)
+        await fs.writeAsync(meta_fd, metaStringify)
+      } else {
+        meta = {}
+      }
+
+      // if body.meta.stat exists, return the meta
+      // or the stat of meta will be the stat of the meta file
+      meta.stat = meta.stat || await fs.fstatAsync(meta_fd)
+
+      // release file
+      fs.close(fd)
+      fs.close(meta_fd)
+
+      return meta
     } catch(err) {
       err.status = 500
       err.message = 'fail to create a empty file'
