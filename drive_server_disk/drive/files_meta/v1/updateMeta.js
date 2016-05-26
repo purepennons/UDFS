@@ -20,6 +20,36 @@ const storage_path = path.join(__dirname, config.storage_path)
  */
 
 module.exports = function updateMeta(req, res, next) {
+  // functions
+  // generator
+  async function updateMeta(meta_id, meta) {
+    try {
+      let file_path = path.join(storage_folder, `${meta_id}_meta`)
+      let origin_meta = await fs.readFileAsync(file_path)
+      origin_meta = JSON.parse(origin_meta)
+
+      Object.keys(meta).map(key => {
+        origin_meta[key] = xtend(origin_meta[key], meta[key])
+      })
+
+      let meta_fd = await fs.openAsync(file_path, 'w')
+      await fs.writeAsync(meta_fd, JSON.stringify(origin_meta))
+
+      // release
+      fs.close(meta_fd)
+
+      return origin_meta
+    } catch(err) {
+      err.status = 500
+      err.message = 'Something wrong when updating the metadata'
+      throw err
+    }
+  }
+
+  // functions end
+
+
+
   let fs_id = req.params.fs_id
   let meta_id = req.params.meta_id
   let meta = req.body.meta || null
@@ -48,28 +78,4 @@ module.exports = function updateMeta(req, res, next) {
     })
   }).catch(err => next(err))
 
-  // generator
-  async function updateMeta(meta_id, meta) {
-    try {
-      let file_path = path.join(storage_folder, `${meta_id}_meta`)
-      let origin_meta = await fs.readFileAsync(file_path)
-      origin_meta = JSON.parse(origin_meta)
-
-      Object.keys(meta).map(key => {
-        origin_meta[key] = xtend(origin_meta[key], meta[key])
-      })
-
-      let meta_fd = await fs.openAsync(file_path, 'w')
-      await fs.writeAsync(meta_fd, JSON.stringify(origin_meta))
-
-      // release
-      fs.close(meta_fd)
-
-      return origin_meta
-    } catch(err) {
-      err.status = 500
-      err.message = 'Something wrong when updating the metadata'
-      throw err
-    }
-  }
 }

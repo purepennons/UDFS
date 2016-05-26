@@ -136,6 +136,26 @@ test('get a metadata from a file', assert => {
       assert.deepEqual(bodyObj.data[0].meta.otherInfo, {a:10, b:20}, 'Get the stat from metadata')
 
       debug('body', body)
+
+      // test the update operation
+      let updateData = JSON.stringify({
+        otherInfo: {a:20, c:30}
+      })
+
+      let putUrl = [root_url, fs_id, '/meta', `/${meta_id}`].join('')
+      req.put({
+        url: putUrl,
+        headers: {
+          'content-type' : 'application/x-www-form-urlencoded'
+        },
+        body: `meta=${updateData}`
+      }, (err, res, body) => {
+        let bodyObj = JSON.parse(body)
+
+        assert.error(err, `update a metadata from ${meta_id} object without error`)
+        assert.equal(res.statusCode, 200, `update a metadata from ${meta_id} object success`)
+        assert.deepEqual(bodyObj.data[0].meta.otherInfo, {a:20, b:20, c:30}, 'update otherInfo of metadata')
+      })
     })
   })
 
