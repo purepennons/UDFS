@@ -12,7 +12,7 @@ const config = require('../../../config/config.json')
 const storage_path = path.join(__dirname, config.storage_path)
 
 /**
- * url: /{fs_id}/meta/create
+ * url: POST -> /{fs_id}/meta/create
  * body: {
  *   meta: {
  *     stat,
