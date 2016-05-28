@@ -22,9 +22,8 @@ const storage_path = path.join(__dirname, config.storage_path)
 module.exports = function updateMeta(req, res, next) {
   // functions
   // generator
-  async function updateMeta(meta_id, meta) {
+  async function updateMeta(file_path, meta_id, meta) {
     try {
-      let file_path = path.join(storage_folder, `${meta_id}_meta`)
       let origin_meta = await fs.readFileAsync(file_path)
       origin_meta = JSON.parse(origin_meta)
 
@@ -55,16 +54,19 @@ module.exports = function updateMeta(req, res, next) {
   let meta = req.body.meta || null
   if(meta) meta = JSON.parse(meta)
   let storage_folder = path.resolve(path.join(storage_path, fs_id))
+  let target = path.join(storage_folder, `${meta_id}_meta`)
 
-  if(!meta) {
-    return res.status(204).json({
-      status: 'success',
-      message: 'Not Modified',
-      data: []
-    })
-  }
-
-  updateMeta(meta_id, meta)
+  fs.accessAsync(target, fs.F_OK)
+  .then( () => {
+    if(!meta) {
+      return res.status(204).json({
+        status: 'success',
+        message: 'Not Modified',
+        data: []
+      })
+    }
+    return updateMeta(target, meta_id, meta)
+  })
   .then(meta => {
     return res.status(200).json({
       status: 'success',
@@ -76,6 +78,9 @@ module.exports = function updateMeta(req, res, next) {
         object_url: `/storage/v1/${fs_id}/files/${meta_id}`
       }]
     })
-  }).catch(err => next(err))
+  }).catch(err => {
+    if(err.code === 'ENOENT') return next()
+    return next(err)
+  })
 
 }

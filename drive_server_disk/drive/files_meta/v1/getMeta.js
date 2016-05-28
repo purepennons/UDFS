@@ -40,7 +40,10 @@ module.exports = function getMeta(req, res, next) {
 
   let target = path.resolve(path.join(storage_path, fs_id, `${meta_id}_meta`))
 
-  readMetadata(target)
+  fs.accessAsync(target, fs.F_OK)
+  .then( () => {
+    return readMetadata(target)
+  })
   .then(meta => {
     return res.status(200).json({
       status: 'success',
@@ -52,5 +55,8 @@ module.exports = function getMeta(req, res, next) {
         object_url: `/storage/v1/${fs_id}/files/${meta_id}`
       }]
     })
-  }).catch(err => next(err))
+  }).catch(err => {
+    if(err.code === 'ENOENT') return next()
+    return next(err)
+  })
 }

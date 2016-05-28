@@ -10,6 +10,8 @@ const host = 'http://localhost:3000'
 // storage
 const fs_id = '9a4a5870-1915-11e6-8eb1-873616bc0784'
 const root_url = [host, '/storage/v1/'].join('')
+// 404
+const notFoundUrl = [root_url, fs_id, '/meta', '/notFound'].join('')
 
 test('create a new metadata of the file', assert => {
 
@@ -70,6 +72,12 @@ test('create a new metadata of the file', assert => {
 })
 
 test('get a metadata from a file', assert => {
+
+  // GET 404
+  req.get(notFoundUrl, (err, res, body) => {
+    assert.error(err, `get metadata without errors (404)`)
+    assert.equal(res.statusCode, 404, `Metadata not found`)
+  })
 
   let createUrl = [root_url, fs_id, '/meta', '/create'].join('')
 
@@ -142,6 +150,12 @@ test('get a metadata from a file', assert => {
         otherInfo: {a:20, c:30}
       })
 
+      // PUT 404
+      req.put(notFoundUrl, (err, res, body) => {
+        assert.error(err, `Update a non-exist object's metadata without errors (404)`)
+        assert.equal(res.statusCode, 404, `Metadata not found`)
+      })
+
       let putUrl = [root_url, fs_id, '/meta', `/${meta_id}`].join('')
       req.put({
         url: putUrl,
@@ -155,6 +169,12 @@ test('get a metadata from a file', assert => {
         assert.error(err, `update a metadata from ${meta_id} object without error`)
         assert.equal(res.statusCode, 200, `update a metadata from ${meta_id} object success`)
         assert.deepEqual(bodyObj.data[0].meta.otherInfo, {a:20, b:20, c:30}, 'update otherInfo of metadata')
+      })
+
+      // update without metadata
+      req.put(putUrl, (err, res, body) => {
+        assert.error(err, `update a metadata from ${meta_id} object without error`)
+        assert.equal(res.statusCode, 204, `update a metadata from ${meta_id} object success`)
       })
     })
   })
