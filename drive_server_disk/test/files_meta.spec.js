@@ -169,13 +169,33 @@ test('get a metadata from a file', assert => {
         assert.error(err, `update a metadata from ${meta_id} object without error`)
         assert.equal(res.statusCode, 200, `update a metadata from ${meta_id} object success`)
         assert.deepEqual(bodyObj.data[0].meta.otherInfo, {a:20, b:20, c:30}, 'update otherInfo of metadata')
+
+        // update without metadata
+        req.put(putUrl, (err, res, body) => {
+          assert.error(err, `update a metadata from ${meta_id} object without error`)
+          assert.equal(res.statusCode, 204, `update a metadata from ${meta_id} object success`)
+
+          // delete the metadata
+          let deleteUrl = [root_url, fs_id, '/meta', `/${meta_id}`].join('')
+          req.delete(deleteUrl, (err, res, body) => {
+            assert.error(err, `delete a metadata without errors`)
+            assert.equal(res.statusCode, 204, `delete a metadata success`)
+
+            // delete more times will response 404
+            req.delete(deleteUrl, (err, res, body) => {
+              assert.error(err, `delete a not found metadata without errors`)
+              assert.equal(res.statusCode, 404, `the metadata is not found`)
+
+            // check the metadata is exists or not
+            req.get(getUrl, (err, res, body) => {
+                assert.equal(res.statusCode, 404, `the metadata is not found`)
+              })
+            })
+
+          })
+        })
       })
 
-      // update without metadata
-      req.put(putUrl, (err, res, body) => {
-        assert.error(err, `update a metadata from ${meta_id} object without error`)
-        assert.equal(res.statusCode, 204, `update a metadata from ${meta_id} object success`)
-      })
     })
   })
 
