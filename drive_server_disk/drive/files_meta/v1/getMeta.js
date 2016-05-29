@@ -52,6 +52,7 @@ module.exports = function getMeta(req, res, next) {
         fs_id,
         meta_id,
         meta,
+        object_id: meta_id,
         object_url: `/storage/v1/${fs_id}/files/${meta_id}`
       }]
     })
