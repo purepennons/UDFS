@@ -25,7 +25,7 @@ router.delete(v1('/:fs_id/meta/:meta_id'), v1_files_meta.deleteMeta)
 
 // file operations
 router.get(v1('/:fs_id/files/:object_id'), v1_files.getFile)
-// router.post(v1('/:fs_id/files/create'), v1_files.createFile)
+router.post(v1('/:fs_id/files/create'), v1_files.createFile)  // same as POST -> /meta/:meta_id
 router.put(v1('/:fs_id/files/:object_id'), v1_files.updateFile)
 router.delete(v1('/:fs_id/files/:object_id'), v1_files.deleteFile)
 

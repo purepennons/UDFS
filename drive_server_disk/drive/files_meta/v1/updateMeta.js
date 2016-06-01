@@ -80,6 +80,7 @@ module.exports = function updateMeta(req, res, next) {
     })
   }).catch(err => {
     if(err.code === 'ENOENT') return next()
+    err.status = 500
     return next(err)
   })
 
