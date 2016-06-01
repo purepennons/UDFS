@@ -20,7 +20,7 @@ module.exports = function updateFile(req, res, next) {
   let fs_id = req.params.fs_id
   let object_id = req.params.object_id
   let meta_id = object_id // in this driver, the object_id will be same as the meta_id
-  let len = req.headers['content-length'] // the value is not correct
+  let len = req.headers['content-length'] // the value is not correct and not used
 
   // range parsing
   let range = req.headers['range']
@@ -57,9 +57,12 @@ module.exports = function updateFile(req, res, next) {
   let target = path.join(storage_folder, `${object_id}`)
   let meta_target = path.join(storage_folder, `${meta_id}_meta`)
 
-  async function updateFile() {
+  fs.accessAsync(target, fs.F_OK)
+  .then(() => {
     // read old meta
-    let old_meta = await fs.readFileAsync(meta_target)
+    return fs.readFileAsync(meta_target)
+  })
+  .then(old_meta => {
     old_meta = JSON.parse(old_meta) // assume that it will never be failed.
 
     // check the size of file is matched to the range before updating
@@ -73,7 +76,7 @@ module.exports = function updateFile(req, res, next) {
     let uploadFlag = false  // only allow one file to be uploaded
 
     form.on('error', err => {
-      debug('form error', err)
+      debug('err', err)
       err.status = 500
       next(err)
     })
@@ -86,50 +89,62 @@ module.exports = function updateFile(req, res, next) {
         flags: 'r+',
         start: range[0].start
       })
-      part.pipe(ws)
-    })
-    form.on('close', () => {
-      debug('GGGGGGGGGGGGGGGGGG')
-      async function updateMeta() {
-        let stat = await fs.statAsync(target)
-        debug('stat', stat)
 
-        // update the metadata
-        old_meta['stat'] = xtend(old_meta['stat'], stat)
-        let meta_fd = await fs.openAsync(file_path, 'w')
-        await fs.writeAsync(meta_fd, JSON.stringify(old_meta))
-
-        // release
-        fs.close(meta_fd)
-        return stat
-      }
-
-      updateMeta().then(() => {
-        // response
-        return res.status(200).json({
-          status: 'success',
-          message: `${object_id} object was updated from ${range[0].start} position`,
-          data: []
-        })
-      }).catch(err => {
+      ws
+      .on('error', err => {
+        debug('err', err)
         err.status = 500
+        err.message = 'something wrong when writing the data'
         return next(err)
       })
+      .on('close', () => {
+        async function updateMeta() {
+          let stat = await fs.statAsync(target)
+          debug('stat', stat)
+
+          // update the metadata
+          let meta = {}
+          meta['stat'] = xtend(old_meta['stat'], stat)
+          let meta_fd = await fs.openAsync(meta_target, 'w')
+          await fs.writeAsync(meta_fd, JSON.stringify(meta))
+
+          // release
+          fs.close(meta_fd)
+          return meta
+        }
+
+        // update and response
+        updateMeta()
+        .then(stat => {
+          return res.status(200).json({
+            status: 'success',
+            message: `${object_id} object was updated from ${range[0].start} position`,
+            data: []
+          })
+        })
+        .catch(err => {
+          debug('err', err)
+          err.status = 500
+          err.message = 'something wrong when updating the metadata'
+          return next(err)
+        })
+      })
+
+      // write the data
+      part.pipe(ws)
+
+    })
+    form.on('close', () => {
+      // do nothing
     })
 
     // req parse
     form.parse(req)
-
-    return
-  }
-
-  fs.accessAsync(target, fs.F_OK)
-  .then( () => {
-    return updateFile()
   })
   .catch(err => {
     if(err.code === 'ENOENT') return next()
     err.status = 500
     return next(err)
   })
+
 }
