@@ -8,7 +8,7 @@ const path = require('path')
 const host = 'http://localhost:3000'
 
 // storage
-const fs_id = '9a4a5870-1915-11e6-8eb1-873616bc0784'
+const fs_id = 'f9897650-27dd-11e6-a489-b36c34b5dedb'
 const root_url = [host, '/storage/v1/'].join('')
 // 404
 const notFoundUrl = [root_url, fs_id, '/meta', '/notFound'].join('')

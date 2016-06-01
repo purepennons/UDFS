@@ -22,7 +22,7 @@ const storage_path = path.join(__dirname, config.storage_path)
  */
 module.exports = function createMeta(req, res, next) {
   let fs_id = req.params.fs_id
-  let meta = req.body.meta || null
+  let meta = req.body.meta || undefined
   if(meta) meta = JSON.parse(meta)
 
   let storage_folder = path.resolve(path.join(storage_path, fs_id))
@@ -55,25 +55,22 @@ module.exports = function createMeta(req, res, next) {
   })
 
   // functions
-  async function createMetaAndEmpty(meta_id, meta) {
+  async function createMetaAndEmpty(meta_id, meta={}) {
+    // create a empty file and response the metadata
     try {
-      // create a empty file and response the metadata
+      if(!meta) meta = {}
 
       // create the meta file
       let meta_fd = await fs.openAsync(path.join(storage_folder, `${meta_id}_meta`), 'w')
       // empty file for real data
       let fd = await fs.openAsync(path.join(storage_folder, meta_id), 'w')
 
-      if(meta) {
-        let metaStringify = JSON.stringify(meta)
-        await fs.writeAsync(meta_fd, metaStringify)
-      } else {
-        meta = {}
-      }
-
       // if body.meta.stat exists, return the meta
-      // or the stat of meta will be the stat of the meta file
-      meta.stat = meta.stat || await fs.fstatAsync(meta_fd)
+      // or the stat of meta will be the stat of the file
+      meta.stat = meta.stat || await fs.fstatAsync(fd)
+
+      // write the metadata to meta file
+      await fs.writeAsync(meta_fd, JSON.stringify(meta))
 
       // release file
       fs.close(fd)
