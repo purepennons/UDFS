@@ -131,7 +131,7 @@ test('get a content by object_id', assert => {
         assert.equal(body.toString('hex'), fs.readFileSync(dummy_path, {encoding: 'hex'}), 'the full content is matched')
       })
 
-      // partial content
+      // partial content 1
       req.get({
         url: getUrl,
         headers: {
@@ -143,6 +143,22 @@ test('get a content by object_id', assert => {
         assert.equal(res.statusCode, 200, 'get partial content ok')
 
         fs.createReadStream(dummy_path, {start: 10}).pipe(concat(data => {
+          assert.equal(body.toString('hex'), data.toString('hex'), 'the partial content is matched')
+        }))
+      })
+
+      // partial content 2
+      req.get({
+        url: getUrl,
+        headers: {
+          'range': 'bytes=30-50'
+        },
+        encoding: null
+      }, (err, res, body) => {
+        if(err) console.log('err', err)
+        assert.equal(res.statusCode, 200, 'get partial content ok')
+
+        fs.createReadStream(dummy_path, {start: 30, end: 50}).pipe(concat(data => {
           assert.equal(body.toString('hex'), data.toString('hex'), 'the partial content is matched')
         }))
       })
