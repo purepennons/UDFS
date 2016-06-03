@@ -8,11 +8,13 @@ const FormData = require('form-data')
 const http = require('http')
 const fs = require('fs-extra')
 const unireq = require('unirest')
+// const contenRange = require('content-range')
 
 const host = 'http://localhost:3000'
 
 // storage
 const root_url = [host, '/storage/v1/'].join('')
+const dummy_path = path.resolve(path.join(__dirname, './dummy/fakeFileToUpload.txt'))
 
 const CRLF = '\r\n'
 
@@ -33,55 +35,61 @@ function setup(cb) {
 }
 
 function clear(fs_id, meta_id, object_id, object_url) {
-  req.delete([root_url, fs_id, '/meta', `/${meta_id}`].join(''), (err, res, body) => {
-    console.log('clear the test')
-  })
+  // req.delete([root_url, fs_id, '/meta', `/${meta_id}`].join(''), (err, res, body) => {
+  //   console.log('clear the test')
+  // })
 }
 
 test('upload a file', assert => {
   setup((fs_id, meta_id, object_id, object_url) => {
     debug('setup', fs_id, meta_id, object_id, object_url)
 
-    let req_stream = req.put([root_url, fs_id, '/files', `/${object_id}`].join(''))
-    req_stream.setHeader('Content-Range', 'bytes 2-123/123')
+    // full update, offset = 0
+    let stat = fs.statSync(dummy_path)
 
-    let form = req_stream.form()
-    form.append('file', fs.createReadStream('/Users/PureWind/Documents/githubProject/thesis/drive_server_disk/app.js'))
-    form.getLength((err, len) => {
-      req_stream.setHeader('Content-Length', len)
+    // real request
+    let req_stream = req.put({
+      url: [root_url, fs_id, '/files', `/${object_id}`].join(''),
+      headers: {
+        'range': 'bytes=0-',
+      },
+      formData: {
+        'file': fs.createReadStream(dummy_path)
+      }
     })
 
+    // response
     req_stream.on('response', res => {
-      console.log(res.statusCode)
+      assert.equal(res.statusCode, 200, 'upload full content success')
+
+      // update a object from offset 10
+      let offset_req_stream = req.put({
+        url: [root_url, fs_id, '/files', `/${object_id}`].join(''),
+        headers: {
+          'range': 'bytes=10-',
+        },
+        formData: {
+          'file': fs.createReadStream(dummy_path)
+        }
+      })
+
+      offset_req_stream.on('response', res => {
+        assert.equal(res.statusCode, 200, 'upload partial content success')
+
+        clear(fs_id, meta_id, object_id, object_url)
+      })
+
     })
-
-    // let form_ops = {}
-    //
-    // form.append('filename', 'test_value')
-    // form.append('filename2', 'test_value')
-    // form.append('filename3', 'test_value')
-    //
-    // let headers = {
-    //   'content-type': form.getHeaders(),
-    //   'content-length': 123
-    // }
-    //
-    // let req_stream = http.request({
-    //   method: 'put',
-    //   port: 3000,
-    //   host: 'localhost',
-    //   path: ['/storage/v1/', fs_id, '/files/', object_id].join(''),
-    //   headers: headers
-    // })
-    //
-    // req_stream.on('error', err => console.error(err.stack))
-    // form.pipe(req_stream)
-    //
-    // req_stream.on('response', res => {
-    //   console.log(res.statusCode)
-    // })
-
-    clear(fs_id, meta_id, object_id, object_url)
   })
+
+  // advance form example
+  // NOTE: Advanced use-case, for normal use see 'formData' usage above
+  // var r = request.post('http://service.com/upload', function optionalCallback(err, httpResponse, body) {...})
+  // var form = r.form();
+  // form.append('my_field', 'my_value');
+  // form.append('my_buffer', new Buffer([1, 2, 3]));
+  // form.append('custom_file', fs.createReadStream(__dirname + '/unicycle.jpg'), {filename: 'unicycle.jpg'});
+
+
   assert.end()
 })

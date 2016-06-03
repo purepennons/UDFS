@@ -21,6 +21,7 @@ module.exports = function updateFile(req, res, next) {
   let object_id = req.params.object_id
   let meta_id = object_id // in this driver, the object_id will be same as the meta_id
   let len = req.headers['content-length'] // the value is not correct and not used
+  debug('content-length', len)
 
   // range parsing
   let range = req.headers['range']
@@ -100,7 +101,7 @@ module.exports = function updateFile(req, res, next) {
       .on('close', () => {
         async function updateMeta() {
           let stat = await fs.statAsync(target)
-          debug('stat', stat)
+          // debug('stat', stat)
 
           // update the metadata
           let meta = {}
