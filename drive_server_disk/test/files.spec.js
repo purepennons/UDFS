@@ -8,6 +8,7 @@ const FormData = require('form-data')
 const http = require('http')
 const fs = require('fs-extra')
 const unireq = require('unirest')
+const concat = require('concat-stream')
 // const contenRange = require('content-range')
 
 const host = 'http://localhost:3000'
@@ -50,6 +51,7 @@ test('upload a file', assert => {
     // real request
     let req_stream = req.put({
       url: [root_url, fs_id, '/files', `/${object_id}`].join(''),
+      encoding: null,
       headers: {
         'range': 'bytes=0-',
       },
@@ -65,6 +67,7 @@ test('upload a file', assert => {
       // update a object from offset 10
       let offset_req_stream = req.put({
         url: [root_url, fs_id, '/files', `/${object_id}`].join(''),
+        encoding: null,
         headers: {
           'range': 'bytes=10-',
         },
@@ -90,6 +93,61 @@ test('upload a file', assert => {
   // form.append('my_buffer', new Buffer([1, 2, 3]));
   // form.append('custom_file', fs.createReadStream(__dirname + '/unicycle.jpg'), {filename: 'unicycle.jpg'});
 
+
+  assert.end()
+})
+
+test('get a content by object_id', assert => {
+  setup((fs_id, meta_id, object_id, object_url) => {
+    // full update, offset = 0
+    let stat = fs.statSync(dummy_path)
+
+    // real request
+    let req_stream = req.put({
+      url: [root_url, fs_id, '/files', `/${object_id}`].join(''),
+      encoding: null,
+      headers: {
+        'range': 'bytes=0-',
+      },
+      formData: {
+        'file': fs.createReadStream(dummy_path)
+      }
+    })
+
+    // upload response
+    req_stream.on('response', res => {
+      let getUrl = [root_url, fs_id, '/files', `/${object_id}`].join('')
+
+      // full content
+      req.get({
+        url: getUrl,
+        headers: {
+          'range': 'bytes=0-'
+        },
+        encoding: null
+      }, (err, res, body) => {
+        if(err) console.log('err', err)
+        assert.equal(res.statusCode, 200, 'get full content ok')
+        assert.equal(body.toString('hex'), fs.readFileSync(dummy_path, {encoding: 'hex'}), 'the full content is matched')
+      })
+
+      // partial content
+      req.get({
+        url: getUrl,
+        headers: {
+          'range': 'bytes=10-'
+        },
+        encoding: null
+      }, (err, res, body) => {
+        if(err) console.log('err', err)
+        assert.equal(res.statusCode, 200, 'get partial content ok')
+
+        fs.createReadStream(dummy_path, {start: 10}).pipe(concat(data => {
+          assert.equal(body.toString('hex'), data.toString('hex'), 'the partial content is matched')
+        }))
+      })
+    })
+  })
 
   assert.end()
 })
