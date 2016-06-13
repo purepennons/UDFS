@@ -6,6 +6,7 @@ const fuse = require('fuse-bindings')
 const path = require('path')
 const octal = require('octal')
 const xtend = require('xtend')
+const http = require('http')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 
@@ -17,6 +18,15 @@ const files_ops = require('../secure_db/operations/files_ops')
 
 // promisify
 fs.openAsync = Promise.promisify(fs.open)
+const P_req = function(ops) {
+  return new Promise((resolve, reject) => {
+    http.request(ops, res => {
+      return resolve(res)
+    }).on('error', err => {
+      reject(err)
+    }).end()
+  })
+}
 
 // global values in the scope
 const FD_MAX = 65535
@@ -135,56 +145,97 @@ exports.getMainContext = function(root, db, io, options) {
     // if(len > s.size - offset) len = s.size - offset
     // 當欲讀取剩餘大小 (s.size-offset) 小於 buffer 長度，設定 buffer 長度 = 讀取剩餘大小 (s.size-offset)
     if(s.size - offset < len) {
-      f.hasNext = false
       len = s.size - offset
     }
 
+    /**
+     * 終止條件尚未完善
+     * 目前：下個 offset (next_offset) 等於下次 fuse request 的 offset 時 (意味連續的 request)，
+     * 沿用之前的 Stream。
+     * 若 f.stream 存在，next_offset 卻不等於 offset，則銷毀 Stream，重新建立
+     */
+    async function gen(f) {
+      // end condition
+      console.log(f)
+      if(f.stream && f.next_offset !== offset) {
+        // destory the stream
+        f.stream.destroy()
+        f.stream = null
 
-    debug('f.offset = %s, offset = %s', f.offset, offset)
+        fd_map.set(fd, f)
+      }
 
-    if(!f.stream) {
-      // TODO:
-      // change to the real io request
-      f.stream = fs.createReadStream('/src/src/fuse/fake_data/test', {
-        start: offset
-      })
+      if(!f.stream) {
+        console.log('create')
+        await initStream()
+      }
 
-      // if change to other stream source, maybe need to set the encording to null(binary).
-      // f.stream.setEncoding(null)
+      loop()
 
-      f.stream.on('error', err => {
-        debug('[ERROR]-read', err.stack)
-        return cb(fuse['EIO'])
-      })
+      async function initStream() {
+        let ops = {
+          hostname: 'localhost',
+          port: 3000,
+          path: `/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+          method: 'GET',
+          headers: {
+            'Range': `bytes=${offset}-`
+          },
+          encoding: null
+        }
 
-      f.offset = offset
-      fd_map.set(fd, f)
+        let res = await P_req(ops)
+        f.stream = res
+        // if change to other stream source, maybe need to set the encording to null(binary).
+        // f.stream.setEncoding(null)
+
+        f.stream
+        .on('error', err => {
+          debug('[ERROR]-read', err.stack)
+          return cb(fuse['EIO'])
+        })
+        .on('end', () => {
+          // destory the stream
+          f.stream.destroy()
+          f.stream = null
+
+          fd_map.set(fd, f)
+        })
+
+        f.offset = offset
+        fd_map.set(fd, f)
+      }
+
+      function loop() {
+        // if the stream was cleared, end the reading operation
+        debug('len=%s, offset=%s', len, offset)
+        if(len <= 0) return cb(0)
+
+        let result = f.stream.read(len)
+        if(!result) return f.stream.once('readable', loop)
+        result.copy(buf)
+        f.next_offset = offset + len
+        fd_map.set(fd, f)
+
+        debug('result length = %s', result.length)
+        return cb(result.length)
+      }
     }
 
-    // end condition
-    if(f.stream && f.offset !== offset) {
-      // destory the stream
-      f.stream.destroy()
-      f.stream = null
+    gen(f)
+    .then(handledLength => {
+      // return cb(handledLength)
+    }).catch(err => {
+      console.log(err)
+      return cb(fuse['EIO'])
+    })
 
-      fd_map.set(fd, f)
-    }
 
-    // read the file by stream
-    // Max read size of each time is equal to the length of buffer
-    function loop() {
-      // if the stream was cleared, end the reading operation
-      if(!f.stream) return cb(0)
-
-      let result = f.stream.read(len)
-      if(!result) return f.stream.once('readable', loop)
-      result.copy(buf)
-
-      debug('result length = %s', result.length)
-      return cb(result.length)
-    }
-
-    loop()
+    // debug('len=%s, offset=%s', len, offset)
+    // if(len <= 0) return cb(0)
+    // let buffer = new Buffer(len).fill('G')
+    // buffer.copy(buf)
+    // return cb(len)
   }
 
   ops.readdir = function(key, cb) {
