@@ -27,14 +27,19 @@ module.exports = function getFile(req, res, next) {
   .then(stat => {
     let rs = null // readable stream
     if(!range) {
+      debug('full read')
       // if range === null, return whole content
-      rs = fs.createReadStream(target)
+      // 因為 middleware 要強制有 range header，所以暫時無用
+      rs = fs.createReadStream(target, {end: stat.size})
     } else if(range[0].start >= 0 && range[0].end === MAX_FILE_SIZE-1) {
+      debug('partial read, only assgin start value')
       // if only has start range, return the partial content from start to the end of the file
       rs = fs.createReadStream(target, {
-        start: range[0].start
+        start: range[0].start,
+        end: stat.size - 1  // because end option include the byte.
       })
-    } else if(range[0].end <= stat.size) {
+    } else if(range[0].start >= 0 && range[0].end <= stat.size) {
+      debug('partial read, start and end values are both assigned')
       rs = fs.createReadStream(target, {
         start: range[0].start,
         end: range[0].end
