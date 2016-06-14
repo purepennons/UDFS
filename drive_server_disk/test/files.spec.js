@@ -135,14 +135,14 @@ test('get a content by object_id', assert => {
       req.get({
         url: getUrl,
         headers: {
-          'range': 'bytes=10-'
+          'range': 'bytes=33-'
         },
         encoding: null
       }, (err, res, body) => {
         if(err) console.log('err', err)
         assert.equal(res.statusCode, 200, 'get partial content ok')
 
-        fs.createReadStream(dummy_path, {start: 10}).pipe(concat(data => {
+        fs.createReadStream(dummy_path, {start: 33}).pipe(concat(data => {
           assert.equal(body.toString('hex'), data.toString('hex'), 'the partial content is matched')
         }))
       })
@@ -151,14 +151,14 @@ test('get a content by object_id', assert => {
       req.get({
         url: getUrl,
         headers: {
-          'range': 'bytes=30-50'
+          'range': 'bytes=33-57'
         },
         encoding: null
       }, (err, res, body) => {
         if(err) console.log('err', err)
         assert.equal(res.statusCode, 200, 'get partial content ok')
 
-        fs.createReadStream(dummy_path, {start: 30, end: 50}).pipe(concat(data => {
+        fs.createReadStream(dummy_path, {start: 33, end: 57}).pipe(concat(data => {
           assert.equal(body.toString('hex'), data.toString('hex'), 'the partial content is matched')
         }))
       })
