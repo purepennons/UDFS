@@ -21,28 +21,41 @@ module.exports = function getFile(req, res, next) {
 
   let storage_folder = path.resolve(path.join(storage_path, fs_id))
   let target = path.join(storage_folder, `${object_id}`)
+  let meta_target = path.join(storage_folder, `${meta_id}_meta`)
 
   debug('range', range)
-  fs.statAsync(target)
-  .then(stat => {
+  Promise.all([
+    fs.statAsync(target),
+    fs.readFileAsync(meta_target)
+  ])
+  .then(result => {
+    let stat = result[0]  // the stat of real file
+    let meta = result[1]  // the metadata of the real file from meta file
+    meta = JSON.parse(meta) // assume that it will never be failed.
+
+    // 實務上，meta file 記錄的 file size 有可能小於或大於當前實際儲存在 file 的 file size
+    // 因此需要額外判斷取得的檔案內容，是否符合目前的 meta file 的設定
+    // if size of meta file > size of real file => return size of real file
+    // if size of meta file < size of real file => return size of meta file
     let rs = null // readable stream
+    let real_end_position = (meta.stat.size > stat.size)? stat.size: meta.stat.size
     if(!range) {
       debug('full read')
       // if range === null, return whole content
       // 因為 middleware 要強制有 range header，所以暫時無用
-      rs = fs.createReadStream(target, {end: stat.size})
+      rs = fs.createReadStream(target, {end: real_end_position})
     } else if(range[0].start >= 0 && range[0].end === MAX_FILE_SIZE-1) {
       debug('partial read, only assgin start value')
       // if only has start range, return the partial content from start to the end of the file
       rs = fs.createReadStream(target, {
         start: range[0].start,
-        end: stat.size - 1  // because end option include the byte.
+        end: real_end_position - 1  // because end option include the byte.
       })
-    } else if(range[0].start >= 0 && range[0].end <= stat.size) {
+    } else if(range[0].start >= 0 && range[0].end <= meta.stat.size) {
       debug('partial read, start and end values are both assigned')
       rs = fs.createReadStream(target, {
         start: range[0].start,
-        end: range[0].end
+        end: (range[0].end <= real_end_position)? range[0].end: real_end_position
       })
     } else {
       // ignore this request
