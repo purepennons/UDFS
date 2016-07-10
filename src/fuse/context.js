@@ -11,6 +11,7 @@ const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 
 const lib = require('../lib/lib')
+const CreateWriteIOStream = require('./lib/CreateWriteIOStream')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
@@ -282,13 +283,59 @@ exports.getMainContext = function(root, db, io, options) {
     })
   }
 
+  let prev_write_fd = null
   ops.write = function(key, fd, buf, len, offset, cb) {
     // maybe need to set status of file to true
     // first time to write, create the detail fo the file (if detial of the file not exists)
 
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
-    // debug('buffer', buf.toString())
-    return cb(len)
+    // start_position: (offset % len)
+
+    let start_position = offset % len
+
+    let f = fd_map.get(fd)
+    let s = f.stat
+
+    if(!f.readStream) {
+      f.readStream = new CreateWriteIOStream(fd, {highWaterMark: 65536})
+      f.readStream.on('error', err => {
+        debug('err', err.stack)
+        f.readStream = null
+        fd_map.set(fd, f)
+        return cb(fuse['EIO'])
+      })
+
+      fd_map.set(fd, f)
+
+      debug('start', start_position)
+      debug('start_buf', buf)
+
+      f.readStream.pipe(process.stdout)
+
+      f.readStream.emit('sourceData', buf.slice(start_position))
+      return cb(len - start_position + 1)
+    }
+
+    // end condition
+    if(prev_write_fd && prev_write_fd !== fd) { // maybe set len !== 65536
+      // emit "sourceEnd" event
+
+    }
+
+    f.readStream
+    .on('start', () => {
+      debug('start', start_position)
+      debug('start_buf', buf)
+      f.readStream.emit('sourceData', buf.slice(start_position))
+      return cb(len - start_position + 1)
+    })
+    .on('stop', () => {
+
+    })
+
+
+    // debug('buf', buf)
+    // return cb(len)
   }
 
   ops.truncate = function(key, size, cb) {
