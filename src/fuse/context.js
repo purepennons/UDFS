@@ -9,6 +9,7 @@ const xtend = require('xtend')
 const http = require('http')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
+const Readable = require('stream').Readable
 
 const lib = require('../lib/lib')
 const CreateWriteIOStream = require('./lib/CreateWriteIOStream')
@@ -126,6 +127,11 @@ exports.getMainContext = function(root, db, io, options) {
     debug('release %s, fd = %s', key, fd)
 
     function clearup() {
+      let f = fd_map.get(fd)
+      if(f && f.readStream) {
+        f.readStream.emit('sourceEnd', null)
+        f.readStream.destroy()
+      }
       fd_map.delete(fd)
       fd_count--
       return
@@ -139,9 +145,9 @@ exports.getMainContext = function(root, db, io, options) {
     debug('read from %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
 
     let f = fd_map.get(fd)
+    if(!f) return cb(fuse['ENOENT'])
     let s = f.stat
 
-    if(!f) return cb(fuse['ENOENT'])
 
     // if(len > s.size - offset) len = s.size - offset
     // 當欲讀取剩餘大小 (s.size-offset) 小於 buffer 長度，設定 buffer 長度 = 讀取剩餘大小 (s.size-offset)
@@ -290,49 +296,91 @@ exports.getMainContext = function(root, db, io, options) {
 
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
     // start_position: (offset % len)
-
-    let start_position = offset % len
-
     let f = fd_map.get(fd)
+    if(!f) return cb(fuse['ENOENT'])
     let s = f.stat
+
+    // let start_position = offset % len
+    //
+    //
+    // if(!f.readStream) {
+    //   f.readStream = new Readable
+    //   // f.readStream.on('error', err => {
+    //   //   debug('err', err.stack)
+    //   //   f.readStream = null
+    //   //   fd_map.set(fd, f)
+    //   //   return cb(fuse['EIO'])
+    //   // })
+    //   fd_map.set(fd, f)
+    //
+    //   f.readStream.pipe(process.stdout)
+    // }
+    //
+    // // end condition
+    // if(prev_write_fd && prev_write_fd !== fd) { // maybe set len !== 65536
+    //   f.readStream.push(null)
+    //   prev_write_fd = null
+    // }
+    //
+    // debug('start', start_position)
+    // // copy needed as fuse overrides this buffer
+    // let copy = new Buffer(len)
+    // buf.copy(copy)
+    // f.readStream.push(copy)
+    // return cb(len)
+
+    // older version
+
+    let copy = new Buffer(len)
+    buf.copy(copy)
+    debug('len_out', copy.length)
 
     if(!f.readStream) {
       f.readStream = new CreateWriteIOStream(fd, {highWaterMark: 65536})
-      f.readStream.on('error', err => {
+      f.readStream
+      .on('error', err => {
         debug('err', err.stack)
         f.readStream = null
         fd_map.set(fd, f)
         return cb(fuse['EIO'])
       })
+      // .on('start', () => {
+      //   // debug('start', undefined)
+      //   let copy = new Buffer(buf.length)
+      //   buf.copy(copy)
+      //   f.readStream.emit('sourceData', copy)
+      //   // end condition: len < 65536
+      //   // if(len < 65536) f.readStream.emit('sourceEnd', null)
+      //   // debug('copy', copy)
+      //   debug('len_in', buf.length)
+      //   return cb(copy.length)
+      // })
+      // .on('stop', () => {
+      //   // debug('stop', undefined)
+      // })
 
       fd_map.set(fd, f)
+      f.readStream.emit('sourceData', copy)
 
-      debug('start', start_position)
-      debug('start_buf', buf)
+      // just test the stream
+      f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
 
-      f.readStream.pipe(process.stdout)
 
-      f.readStream.emit('sourceData', buf.slice(start_position))
-      return cb(len - start_position + 1)
+      return cb(copy.length)
     }
 
-    // end condition
-    if(prev_write_fd && prev_write_fd !== fd) { // maybe set len !== 65536
-      // emit "sourceEnd" event
-
+    // 若是第二次以後，需監聽 `start` event，並確定 writable=true，才可以 push
+    if(f.readStream.writable) {
+      f.readStream.emit('sourceData', copy)
+      return cb(copy.length)
+    } else {
+      f.readStream
+      .once('start', () => {
+        f.readStream.emit('sourceData', copy)
+        debug('len_in', copy.length)
+        return cb(copy.length)
+      })
     }
-
-    f.readStream
-    .on('start', () => {
-      debug('start', start_position)
-      debug('start_buf', buf)
-      f.readStream.emit('sourceData', buf.slice(start_position))
-      return cb(len - start_position + 1)
-    })
-    .on('stop', () => {
-
-    })
-
 
     // debug('buf', buf)
     // return cb(len)
