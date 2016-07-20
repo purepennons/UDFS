@@ -9,10 +9,10 @@ class IO {
   }
 
   // need to impelement all io methods for fuse operations
-  read(file_id) {
-    // retuan a readStream
-    
-  }
+  // read(file_id) {
+  //   // retuan a readStream
+  //
+  // }
 }
 
 module.exports = IO
