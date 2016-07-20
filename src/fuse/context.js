@@ -9,7 +9,7 @@ const xtend = require('xtend')
 const http = require('http')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
-const Readable = require('stream').Readable
+const req = require('request')
 
 const lib = require('../lib/lib')
 const CreateWriteIOStream = require('./lib/CreateWriteIOStream')
@@ -123,6 +123,7 @@ exports.getMainContext = function(root, db, io, options) {
     })
   }
 
+  // need to release streams of read and write operations
   ops.release = function(key, fd, cb) {
     debug('release %s, fd = %s', key, fd)
 
@@ -130,7 +131,8 @@ exports.getMainContext = function(root, db, io, options) {
       let f = fd_map.get(fd)
       if(f && f.readStream) {
         f.readStream.emit('sourceEnd', null)
-        f.readStream.destroy()
+        f.readStream = null
+        // f.readStream.destroy()
       }
       fd_map.delete(fd)
       fd_count--
@@ -289,7 +291,6 @@ exports.getMainContext = function(root, db, io, options) {
     })
   }
 
-  let prev_write_fd = null
   ops.write = function(key, fd, buf, len, offset, cb) {
     // maybe need to set status of file to true
     // first time to write, create the detail fo the file (if detial of the file not exists)
@@ -300,37 +301,7 @@ exports.getMainContext = function(root, db, io, options) {
     if(!f) return cb(fuse['ENOENT'])
     let s = f.stat
 
-    // let start_position = offset % len
-    //
-    //
-    // if(!f.readStream) {
-    //   f.readStream = new Readable
-    //   // f.readStream.on('error', err => {
-    //   //   debug('err', err.stack)
-    //   //   f.readStream = null
-    //   //   fd_map.set(fd, f)
-    //   //   return cb(fuse['EIO'])
-    //   // })
-    //   fd_map.set(fd, f)
-    //
-    //   f.readStream.pipe(process.stdout)
-    // }
-    //
-    // // end condition
-    // if(prev_write_fd && prev_write_fd !== fd) { // maybe set len !== 65536
-    //   f.readStream.push(null)
-    //   prev_write_fd = null
-    // }
-    //
-    // debug('start', start_position)
-    // // copy needed as fuse overrides this buffer
-    // let copy = new Buffer(len)
-    // buf.copy(copy)
-    // f.readStream.push(copy)
-    // return cb(len)
-
-    // older version
-
+    // copy needed as fuse overrides this buffer
     let copy = new Buffer(len)
     buf.copy(copy)
     debug('len_out', copy.length)
@@ -344,46 +315,51 @@ exports.getMainContext = function(root, db, io, options) {
         fd_map.set(fd, f)
         return cb(fuse['EIO'])
       })
-      // .on('start', () => {
-      //   // debug('start', undefined)
-      //   let copy = new Buffer(buf.length)
-      //   buf.copy(copy)
-      //   f.readStream.emit('sourceData', copy)
-      //   // end condition: len < 65536
-      //   // if(len < 65536) f.readStream.emit('sourceEnd', null)
-      //   // debug('copy', copy)
-      //   debug('len_in', buf.length)
-      //   return cb(copy.length)
-      // })
-      // .on('stop', () => {
-      //   // debug('stop', undefined)
-      // })
+      .on('stop', () => {
+        // do nothing
+      })
 
       fd_map.set(fd, f)
       f.readStream.emit('sourceData', copy)
 
-      // just test the stream
-      f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
+      // // just test the strea
+      // f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
 
+      // upload the read stream
+      // real request
+      // let req_stream = req.put({
+      //   url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+      //   encoding: null,
+      //   headers: {
+      //     'range': 'bytes=0-',
+      //   },
+      //   formData: {
+      //     'file': f.readStream
+      //   }
+      // })
+      //
+      // req_stream.on('response', res => {
+      //   debug('upload complete')
+      // })
 
-      return cb(copy.length)
+      f.readStream.pipe(process.stdout)
+
+      return cb(len)
     }
 
     // 若是第二次以後，需監聽 `start` event，並確定 writable=true，才可以 push
     if(f.readStream.writable) {
       f.readStream.emit('sourceData', copy)
-      return cb(copy.length)
+      return cb(len)
     } else {
       f.readStream
       .once('start', () => {
         f.readStream.emit('sourceData', copy)
         debug('len_in', copy.length)
-        return cb(copy.length)
+        return cb(len)
       })
     }
 
-    // debug('buf', buf)
-    // return cb(len)
   }
 
   ops.truncate = function(key, size, cb) {
