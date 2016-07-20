@@ -173,7 +173,7 @@ test('get a metadata from a file', assert => {
         // update without metadata
         req.put(putUrl, (err, res, body) => {
           assert.error(err, `update a metadata from ${meta_id} object without error`)
-          assert.equal(res.statusCode, 204, `update a metadata from ${meta_id} object success`)
+          assert.equal(res.statusCode, 304, `update a metadata from ${meta_id} object success`)
 
           // delete the metadata
           let deleteUrl = [root_url, fs_id, '/meta', `/${meta_id}`].join('')

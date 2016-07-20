@@ -1,3 +1,4 @@
+const debug = require('debug')('fuse-io-requests')
 const fs = require('fs-extra')
 const url = require('url')
 const req = require('request')
@@ -6,7 +7,7 @@ const Promise = require('bluebird')
 const HTTPCode= require('http-status-codes')
 
 // other define
-const StreamReq = function(ops) {
+const P_Req = function(ops) {
   return new Promise((resolve, reject) => {
     http.request(ops, res => {
       return resolve(res)
@@ -137,7 +138,8 @@ File.get = function(host, fs_id, object_id, start, end) {
 
       const url_path = [root_path, fs_id, '/files', `/${object_id}`].join('')
 
-      let range = (end)? `bytes=${start}-${end}`: 'bytes=${start-}'
+      let range = (end)? `bytes=${start}-${end}`: `bytes=${start}-`
+      debug('range', range)
 
       let req_ops = {
         hostname: hostParse.hostname,
@@ -150,11 +152,16 @@ File.get = function(host, fs_id, object_id, start, end) {
         encoding: null
       }
 
+      // get the response stream
+      P_Req(req_ops)
+      .then( res_stream => {
+        return resolve(res_stream)
+      })
+      .catch(err => reject(err))
     } catch(err) {
       return reject(err)
     }
   })
-
 }
 
 File.update = function() {
@@ -165,6 +172,12 @@ File.del = function() {
   // not implemented
 }
 
-exports.read = function(options) {
-  return fs.createReadStream('../fuse/fake_data/read')
+// exports.read = function(options) {
+//   return fs.createReadStream('../fuse/fake_data/read')
+// }
+
+module.exports = {
+  FileSystem,
+  FileMeta,
+  File
 }

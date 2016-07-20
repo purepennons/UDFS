@@ -59,7 +59,7 @@ module.exports = function updateMeta(req, res, next) {
   fs.accessAsync(target, fs.F_OK)
   .then( () => {
     if(!meta) {
-      return res.status(204).json({
+      return res.status(304).json({
         status: 'success',
         message: 'Not Modified',
         data: []

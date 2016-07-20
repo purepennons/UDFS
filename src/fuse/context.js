@@ -175,26 +175,34 @@ exports.getMainContext = function(root, db, io, options) {
       }
 
       if(!f.stream) {
-        console.log('create')
         await initStream()
       }
 
       loop()
 
       async function initStream() {
-        let ops = {
-          hostname: 'localhost',
-          port: 3000,
-          path: `/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-          method: 'GET',
-          headers: {
-            'Range': `bytes=${offset}-`
-          },
-          encoding: null
-        }
+        // let ops = {
+        //   hostname: 'localhost',
+        //   port: 3000,
+        //   path: `/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+        //   method: 'GET',
+        //   headers: {
+        //     'Range': `bytes=${offset}-`
+        //   },
+        //   encoding: null
+        // }
 
-        let res = await P_req(ops)
-        f.stream = res
+        // let res = await P_req(ops)
+
+        // get the read stream from IO request (read)
+        f.stream = await io.read({
+          key,
+          fd,
+          buf,
+          len,
+          offset,
+          cb
+        })
         // if change to other stream source, maybe need to set the encording to null(binary).
         // f.stream.setEncoding(null)
 
