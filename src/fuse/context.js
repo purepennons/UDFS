@@ -283,16 +283,34 @@ exports.getMainContext = function(root, db, io, options) {
 
     // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
     // ignore now
-    let s = {
+    let basic_stat = lib.statWrapper({
       mode: mode,
       size: 0,
       type: 'file'
+    })
+
+    let meta = {
+      stat: basic_stat
     }
 
-    /**
-     * TODO: write detail of metadata to secure db
-     *
-     */
+    let io_params = {
+
+    }
+
+    let fuse_params = {
+      key,
+      mode,
+      cb
+    }
+
+    async function create_gen() {
+      try {
+        let meta = await io.create(meta, io_params, fuse_params)
+      } catch(err) {
+        return
+      }
+    }
+
     fm_ops.put(key, lib.statWrapper(s), (err, k) => {
       if(err) return cb(fuse[err.code])
       ops.open(key, -1, cb)

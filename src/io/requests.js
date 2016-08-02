@@ -19,6 +19,9 @@ const P_Req = function(ops) {
 
 // error code
 const BAD_CODE = new Error('bad http code')
+BAD_CODE.code = 'EREMOTEIO'
+const OP_ERROR = new Error('operation fail')
+OP_ERROR.code = 'EREMOTEIO'
 
 // define all apis of driver
 // const apiVersion = 'v1'
@@ -45,7 +48,7 @@ let FileMeta = {}
 /*
  *
  * @param {object} meta - must contain a stat property
- * @return {object} http body
+ * @return {object} data of http body
  */
 FileMeta.create = function(host, fs_id, meta) {
   const url = [host, root_path, fs_id, '/meta', '/create'].join('')
@@ -61,7 +64,9 @@ FileMeta.create = function(host, fs_id, meta) {
       }, (err, res, body) => {
         if(err) return reject(err)
         if(res.statusCode !== HTTPCode.CREATED) return reject(BAD_CODE)
-        return resolve(JSON.parse(body))
+        body = JSON.parse(body)
+        if(body.status === 'error') return reject(OP_ERROR)
+        return resolve(body.data[0])
       })
     } catch(err) {
       return reject(err)
