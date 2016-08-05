@@ -6,6 +6,7 @@ const octal = require('octal')
 const xtend = require('xtend')
 const path = require('path')
 const concat = require('concat-stream')
+const Promise = require('bluebird')
 
 const n = require('../../lib/path')
 const stat = require('../../lib/stat')
@@ -194,6 +195,9 @@ module.exports = function(db) {
 			return cb(null, key)
 		})
   }
+
+	// promisify
+	ops = Promise.promisifyAll(ops)
 
   return ops
 }

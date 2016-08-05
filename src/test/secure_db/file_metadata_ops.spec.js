@@ -21,10 +21,7 @@ fs.mkdirpSync(db_path)
 
 let db = levelup(db_path)
 let ops = file_metadata_ops(db)
-
-// promisify
-ops.getAsync = Promise.promisify(ops.get)
-ops.putAsync = Promise.promisify(ops.put)
+console.log(ops)
 
 const root = '/'
 const notExist = '/notExist'
