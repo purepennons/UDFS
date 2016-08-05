@@ -9,21 +9,22 @@ const concat = require('concat-stream')
 
 const n = require('../../lib/path')
 const stat = require('../../lib/stat')
+const lib = require('../../lib/lib')
 const errno = require('../../lib/errno')
 
-const ROOT = stat({
+const ROOT = lib.metaWrapper(stat({
 	type: 'directory',
 	mode: octal(40755),
 	size: 4096,
   uid: process.getuid(),
   gid: process.getgid()
-})
+}))
 
 module.exports = function(db) {
   let ops = {}
 
   /**
-   * cb(err, stat, key)
+   * cb(err, file, key)
    */
   ops.get = function(key, cb) {
     key = n.normalize(key)
@@ -32,9 +33,19 @@ module.exports = function(db) {
     db.get(n.prefix(key), {valueEncoding: 'json'}, (err, file) => {
       if(err && err.notFound) return cb(errno.ENOENT(key), null, key)
       if(err) return cb(err, null, key)
-      return cb(null, stat(file), key)
+      return cb(null, file, key)
     })
   }
+
+	/**
+	 * cb(err, stat, key)
+	 */
+	ops.getStat = function(key, cb) {
+		ops.get(key, (err, file, key) => {
+			if(!file.stat) return cb(errno.ENOENT(key), null, key)
+			return cb(null, file.stat, key)
+		})
+	}
 
   /**
    * cb(err, files)
@@ -58,6 +69,15 @@ module.exports = function(db) {
     .on('error', cb)
   }
 
+	/**
+	 * cb(err, stats)
+	 */
+	ops.getStatList = function(key, cb) {
+		ops.getList(key, (err, files) => {
+			if(err) return cb(err, null)
+			return cb(null, files.map(file => file.stat))
+		})
+	}
 
   /**
    * cb(child_dir)
@@ -81,9 +101,9 @@ module.exports = function(db) {
 			if(err) return cb(err, key)
 
 			// check the parent folder is exist or not.
-			ops.checkParents(path.dirname(key), (err, s, k) => {
+			ops.checkParents(path.dirname(key), (err, file, k) => {
 				if(err) return cb(err)
-				if(!s.isDirectory()) return cb(errno.ENOTDIR(key))
+				if(!stat(file.stat).isDirectory()) return cb(errno.ENOTDIR(key))
 				return cb(null, key)
 			})
 		})
@@ -94,7 +114,7 @@ module.exports = function(db) {
 	 * if err === null -> file exists
 	 */
 	ops.checkNotExist = function(key, cb) {
-		ops.get(key, (err, s, k) => {
+		ops.get(key, (err, file, k) => {
       if(err && err.code === 'ENOENT') return cb(null, key)
 			if(err) return cb(err, key)
 			return cb(errno.EEXIST(key), key)
@@ -102,23 +122,23 @@ module.exports = function(db) {
 	}
 
   /**
-   * cb(err, stat, key)
+   * cb(err, file, key)
    */
   ops.checkParents = function(dir, cb) {
 
-    let parent_state = null
+    let parent_file = null
 
     dir = n.normalize(dir)
     if(dir === '/') return process.nextTick( cb.bind(null, null, ROOT, '/') )
 
     function loop(pdir) {
-      ops.get(pdir, (err, s, key) => {
-        if(err) return cb(err, s, key)
-        if(pdir === dir) parent_state = s
+      ops.get(pdir, (err, file, key) => {
+        if(err) return cb(err, file, key)
+        if(pdir === dir) parent_file = file
         if(pdir !== '/') {
           return loop(path.dirname(pdir))
         } else {
-          return cb(null, parent_state, key)
+          return cb(null, parent_file, key)
         }
       })
     }

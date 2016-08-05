@@ -10,6 +10,7 @@ const levelup = require('levelup')
 
 const file_metadata_ops = require('../../secure_db/operations/file_metadata_ops')
 const stat = require('../../lib/stat')
+const lib = require('../../lib/lib')
 
 const db_path = '/tmp/leveldb/testing/file_metadata_ops'
 
@@ -32,13 +33,13 @@ const folder_path = '/a/b'
 const file_path = '/a/b/file'
 const parentNotFolder = '/a/b/file/GG'
 
-const ROOT = {
+const ROOT = lib.metaWrapper({
 	type: 'directory',
 	mode: octal(777),
 	size: 4096
-}
+})
 
-const folder = {
+const folder = lib.metaWrapper({
   uid: 1000,
   gid: 1000,
   mode: octal(777),
@@ -46,9 +47,9 @@ const folder = {
   type: 'directory',
   status: true,
   file_id: '1234567890'
-}
+})
 
-const file = {
+const file = lib.metaWrapper({
   uid: 1000,
   gid: 1000,
   mode: octal(777),
@@ -56,7 +57,7 @@ const file = {
   type: 'file',
   status: true,
   file_id: '1234567891'
-}
+})
 
 // ops.get
 test('get a file metadata', assert => {
@@ -95,21 +96,21 @@ test('create a new file or directory', assert => {
 			assert.equal(err.code, 'EEXIST', `path ${key} exist. Recreate failed.`)
 		})
 
-    ops.get(key, (err, s, k) => {
+    ops.getStat(key, (err, s, k) => {
       assert.equal(err, null, `key = ${k}, stat = ${util.inspect(s, false, null)}`)
       assert.equal(s.type, 'directory', `path ${key} is a directory.`)
 
       // create /a/b folder
       ops.put(folder_path, folder, (err, key) => {
         assert.equal(err, null, `key = ${key}`)
-        ops.get(key, (err, s, k) => {
+        ops.getStat(key, (err, s, k) => {
           assert.equal(err, null, `key = ${k}, stat = ${util.inspect(s, false, null)}`)
           assert.equal(s.type, 'directory', `path ${key} is a directory.`)
 
           // create a file
           ops.put(file_path, file, (err, key) => {
             assert.equal(err, null, `key = ${key}`)
-            ops.get(key, (err, s, k) => {
+            ops.getStat(key, (err, s, k) => {
               assert.equal(err, null, `key = ${k}, stat = ${util.inspect(s, false, null)}`)
               assert.equal(s.type, 'file', `path ${key} is a file.`)
 

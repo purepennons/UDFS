@@ -3,7 +3,6 @@ const debug = require('debug')('fuse-io')
 const Promise = require('bluebird')
 const octal = require('octal')
 const uuid = require('node-uuid')
-const fuse = require('fuse')
 
 // IO requests must pass to middleware before handling the requests
 const R = require('./requests')

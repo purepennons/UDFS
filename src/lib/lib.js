@@ -71,6 +71,12 @@ exports.statWrapper = function(s, status=false, options={atimeUpdate: true, mtim
   return s
 }
 
+exports.metaWrapper = function(stat) {
+  return {
+    stat
+  }
+}
+
 // return a file info template
 exports.fileInfoWrapper = function(fileInfo) {
   fileInfo.chunk_list = fileInfo.chunk_list || []
