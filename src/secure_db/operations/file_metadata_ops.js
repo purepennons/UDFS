@@ -163,10 +163,18 @@ module.exports = function(db) {
 	 * cb(err, key)
 	 */
 	ops.update = function(key, modify_data, cb) {
-		ops.get(key, (err, s, key) => {
+		ops.get(key, (err, file, key) => {
 			if(err) return cb(err, key)
 			if(key === '/') return cb(errno.EPERM(key), key)
-			return db.put(key, xtend(s, modify_data), {valueEncoding: 'json', sync: true}, err => {
+
+			// updates all properties
+			// file will be the data to be updated
+			Object.keys(modify_data).map(prop => {
+				debug('prop', prop)
+				file[prop] = xtend(file[prop], modify_data[prop])
+			})
+
+			return db.put(n.prefix(key), file, {valueEncoding: 'json', sync: true}, err => {
 				if(err) return cb(err, key)
         return cb(null, key)
 			})

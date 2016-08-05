@@ -118,6 +118,40 @@ test('create a new file or directory', assert => {
               ops.put(parentNotFolder, file, (err, key) => {
                 assert.equal(err.code, 'ENOTDIR', `path ${key} is not a directory`)
               })
+
+							// update the file
+							let update_data = {
+								stat: {
+									uid: 1111,
+									gid: 1111
+								},
+								addInfo: {
+									a: 10,
+									b: 20
+								}
+							}
+							ops.update(file_path, update_data, (err, key) => {
+								assert.equal(err, null, `key = ${key}, update a file success`)
+								ops.get(file_path, (err, file, k) => {
+									let expect = {
+										stat: {
+										  uid: 1111,
+										  gid: 1111,
+										  mode: octal(777),
+										  size: 4096,
+										  type: 'file',
+										  status: true,
+										  file_id: '1234567891'
+										},
+										addInfo: {
+											a: 10,
+											b: 20
+										}
+									}
+									assert.equal(err, null, 'a file has been updated without error')
+									assert.deepEqual(file, expect, 'updated result is correct.')
+								})
+							})
             })
           })
         })
