@@ -267,16 +267,46 @@ exports.getMainContext = function(root, db, io, options) {
   ops.mkdir = function(key, mode, cb) {
     debug('mkdir %s, mode = %s', key, mode)
 
-    let s = {
+    let basic_stat = lib.statWrapper({
       mode: mode + octal(40000),  // octal(40000) means that the file is a directory
       size: DIRECTORY_SIZE,
       type: 'directory'
+    })
+
+    let meta = {
+      stat: basic_stat
     }
 
-    fm_ops.put(key, lib.statWrapper(s, true), (err, k) => {
-      if(err) return cb(fuse[err.code])
-      return cb(0)
-    })
+    let io_params = {
+
+    }
+
+    let fuse_params = {
+      key,
+      mode,
+      cb
+    }
+
+    async function mkdir_gen() {
+      try {
+        let res_meta = await io.mkdir(meta, io_params, fuse_params)
+        let theKey = await fm_ops.putAsync(key, res_meta)
+        debug('res_meta', res_meta)
+        debug('key', theKey)
+        return theKey
+      } catch(err) {
+        throw err
+      }
+    }
+
+    mkdir_gen()
+    .then(k => cb(0))
+    .catch(err => cb(fuse[err.code]))
+
+    // fm_ops.put(key, lib.statWrapper(s, true), (err, k) => {
+    //   if(err) return cb(fuse[err.code])
+    //   return cb(0)
+    // })
   }
 
   ops.create = function(key, mode, cb) {
@@ -305,7 +335,6 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     async function create_gen() {
-      debug('async', 'create')
       try {
         let res_meta = await io.create(meta, io_params, fuse_params)
         let theKey = await fm_ops.putAsync(key, res_meta)
@@ -318,17 +347,9 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     create_gen()
-    .then(k => {
-      debug('key', k)
-      return ops.open(key, -1, cb)
-    })
+    .then(k => ops.open(key, -1, cb))
     .catch(err => cb(fuse[err.code]))
 
-    //
-    // fm_ops.put(key, lib.statWrapper(s), (err, k) => {
-    //   if(err) return cb(fuse[err.code])
-    //   ops.open(key, -1, cb)
-    // })
   }
 
   ops.write = function(key, fd, buf, len, offset, cb) {

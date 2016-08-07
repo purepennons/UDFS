@@ -46,8 +46,8 @@ class IO {
     // source need to pipe to a writestream
   }
 
-  mkdir(fuse_params) {
-    // do nothing
+  mkdir(meta, io_params, fuse_params) {
+    return this.create(meta, io_params, fuse_params)
   }
 
   create(meta, io_params, fuse_params) {
