@@ -73,7 +73,9 @@ exports.statWrapper = function(s, status=false, options={atimeUpdate: true, mtim
 
 exports.metaWrapper = function(stat) {
   return {
-    stat
+    meta: {
+      stat
+    }
   }
 }
 

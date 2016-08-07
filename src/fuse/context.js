@@ -63,7 +63,8 @@ exports.getMainContext = function(root, db, io, options) {
   ops.getattr = function(key, cb) {
     debug('getattr = %s', key)
 
-    fm_ops.get(key, (err, s, k) => {
+    fm_ops.getStat(key, (err, s, k) => {
+      debug('getStat', err)
       if(err) return cb(fuse[err.code])
       debug('stat', s)
       return cb(0, s)
@@ -85,7 +86,7 @@ exports.getMainContext = function(root, db, io, options) {
     debug('open = %s, flag = %s', key, flag)
 
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
-    fm_ops.get(key, (err, s, k) => {
+    fm_ops.getStat(key, (err, s, k) => {
       if(err) return cb(fuse[err.code])
       debug('stat', s)
 
@@ -304,17 +305,30 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     async function create_gen() {
+      debug('async', 'create')
       try {
-        let meta = await io.create(meta, io_params, fuse_params)
+        let res_meta = await io.create(meta, io_params, fuse_params)
+        let theKey = await fm_ops.putAsync(key, res_meta)
+        debug('res_meta', res_meta)
+        debug('key', theKey)
+        return theKey
       } catch(err) {
-        return
+        throw err
       }
     }
 
-    fm_ops.put(key, lib.statWrapper(s), (err, k) => {
-      if(err) return cb(fuse[err.code])
-      ops.open(key, -1, cb)
+    create_gen()
+    .then(k => {
+      debug('key', k)
+      return ops.open(key, -1, cb)
     })
+    .catch(err => cb(fuse[err.code]))
+
+    //
+    // fm_ops.put(key, lib.statWrapper(s), (err, k) => {
+    //   if(err) return cb(fuse[err.code])
+    //   ops.open(key, -1, cb)
+    // })
   }
 
   ops.write = function(key, fd, buf, len, offset, cb) {

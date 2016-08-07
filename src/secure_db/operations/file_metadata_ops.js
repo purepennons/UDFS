@@ -42,9 +42,11 @@ module.exports = function(db) {
 	 * cb(err, stat, key)
 	 */
 	ops.getStat = function(key, cb) {
-		ops.get(key, (err, file, key) => {
-			if(!file.stat) return cb(errno.ENOENT(key), null, key)
-			return cb(null, file.stat, key)
+		ops.get(key, (err, file, k) => {
+			if(err) return cb(err, null, k)
+			if(file.meta && file.meta.stat) return cb(null, stat(file.meta.stat), k)
+			return cb(errno.ENOENT(k), null, k)
+
 		})
 	}
 
@@ -70,16 +72,6 @@ module.exports = function(db) {
     .on('error', cb)
   }
 
-	/**
-	 * cb(err, stats)
-	 */
-	ops.getStatList = function(key, cb) {
-		ops.getList(key, (err, files) => {
-			if(err) return cb(err, null)
-			return cb(null, files.map(file => file.stat))
-		})
-	}
-
   /**
    * cb(child_dir)
    */
@@ -104,7 +96,8 @@ module.exports = function(db) {
 			// check the parent folder is exist or not.
 			ops.checkParents(path.dirname(key), (err, file, k) => {
 				if(err) return cb(err)
-				if(!stat(file.stat).isDirectory()) return cb(errno.ENOTDIR(key))
+				if(!file.meta) return cb(errno.ENOENT(key))
+				if(!stat(file.meta.stat).isDirectory()) return cb(errno.ENOTDIR(key))
 				return cb(null, key)
 			})
 		})
