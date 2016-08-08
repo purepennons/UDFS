@@ -112,6 +112,7 @@ module.exports = function updateFile(req, res, next) {
     })
     form.on('close', () => {
       // do nothing
+      debug('form end')
     })
 
     // req parse

@@ -38,10 +38,41 @@ app.use( (err, req, res, next) => {
   })
 })
 
-// boot
-app.listen( config.port, () => {
-  debug('Server is listening at %s port', config.port)
-  debug('root: ', config.root)
-})
+// init
+async function init() {
+  app.listen( config.port, () => {
+    debug('Server is listening at %s port', config.port)
+    debug('root: ', config.root)
+  })
+}
 
-module.exports = app
+// exit handler
+function cleanup() {
+  return
+}
+
+function exitHandler(options={}, err) {
+
+  async function exitGen() {
+    if(err) console.error('uncaughtException', err.stack)
+    if(options.clean) await cleanup()
+    if(options.exit) process.exit()
+    return
+  }
+
+  exitGen().catch(err => console.error(err))
+}
+
+// catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, {clean: true, exit: true}))
+
+// catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, {clean: true, exit: true}))
+
+// process close
+process.on('exit', exitHandler.bind(null, {clean: true}))
+
+// boot
+init().catch(err => console.error(err))
+
+// module.exports = app
