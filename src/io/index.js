@@ -21,8 +21,9 @@ class IO {
     this.f_ops = files_ops(db.files) // files operation
   }
 
-  // @param {object} fuse_params - fuse_params are equal to the params of operations of FUSE
-
+  /*
+   * @param {object} fuse_params - fuse_params are equal to the params of operations of FUSE
+   */
   // need to impelement all io methods for fuse operations
   read(fuse_params) {
     // retuan a readStream

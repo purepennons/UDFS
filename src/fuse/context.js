@@ -10,6 +10,8 @@ const http = require('http')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 const req = require('request')
+const eos = require('end-of-stream')
+const PassThrough = require('stream').PassThrough
 
 const lib = require('../lib/lib')
 const CreateWriteIOStream = require('./lib/CreateWriteIOStream')
@@ -86,6 +88,16 @@ exports.getMainContext = function(root, db, io, options) {
     debug('open = %s, flag = %s', key, flag)
 
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
+
+    // async function open_gen() {
+    //   let stat = await fm_ops.getStatAsync(key)
+    //   let fileInfo = await
+    // }
+    //
+    // open_gen()
+    // .catch(err => cb(fuse[err.code]))
+
+
     fm_ops.getStat(key, (err, s, k) => {
       if(err) return cb(fuse[err.code])
       debug('stat', s)
@@ -106,21 +118,6 @@ exports.getMainContext = function(root, db, io, options) {
       fd_count++
       return cb(0, fd)
 
-      // // get a unique fd
-      // // "./fd/fd" is a dummy file to generate a file descriptor
-      // fs.openAsync('/src/src/fuse/fd', flag)
-      // .then(fd => {
-      //   debug(`${key} -> fd =`, fd)
-      //
-      //   // record the fd mapping
-      //   fd_map.set(fd, opened_file)
-      //   fd_count++
-      //   cb(0, fd)
-      // })
-      // .catch(err => {
-      //   console.log(err)
-      //   cb(fuse['ENOMEM'])
-      // })
     })
   }
 
@@ -130,18 +127,35 @@ exports.getMainContext = function(root, db, io, options) {
 
     function clearup() {
       let f = fd_map.get(fd)
-      if(f && f.readStream) {
-        f.readStream.emit('sourceEnd', null)
-        f.readStream = null
-        // f.readStream.destroy()
+      if(f) {
+        debug('release')
+        if(f.readStream) {
+          f.readStream.emit('sourceEnd', null)
+          // f.readStream = null
+          // f.readStream.destroy()
+
+          // f.req_stream
+          // .on('response', res => {
+          //   debug('upload complete')
+          //   return cb(0)
+          // })
+          // .on('error', err => {
+          //   return cb(fuse['EIO'])
+          // })
+        }
       }
+
       fd_map.delete(fd)
       fd_count--
+      // return cb(0)
       return
     }
 
-    if(fd) clearup()
-    return cb(0)
+    if(fd) {
+      clearup()
+    } else {
+      return cb(0)
+    }
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
@@ -352,10 +366,11 @@ exports.getMainContext = function(root, db, io, options) {
 
   }
 
+  let c = 0
   ops.write = function(key, fd, buf, len, offset, cb) {
     // maybe need to set status of file to true
     // first time to write, create the detail fo the file (if detial of the file not exists)
-
+    debug('count', ++c)
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
     // start_position: (offset % len)
     let f = fd_map.get(fd)
@@ -369,6 +384,12 @@ exports.getMainContext = function(root, db, io, options) {
 
     if(!f.readStream) {
       f.readStream = new CreateWriteIOStream(fd, {highWaterMark: 65536})
+
+      eos(f.readStream, err => {
+        debug('read stream error', err.stack)
+      })
+
+
       f.readStream
       .on('error', err => {
         debug('err', err.stack)
@@ -378,9 +399,9 @@ exports.getMainContext = function(root, db, io, options) {
       })
       .on('stop', () => {
         // do nothing
+        debug('stop')
       })
 
-      fd_map.set(fd, f)
       f.readStream.emit('sourceData', copy)
 
       // // just test the strea
@@ -388,22 +409,19 @@ exports.getMainContext = function(root, db, io, options) {
 
       // upload the read stream
       // real request
-      // let req_stream = req.put({
+      // f.req_stream = req.put({
       //   url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
       //   encoding: null,
       //   headers: {
       //     'range': 'bytes=0-',
       //   },
       //   formData: {
-      //     'file': f.readStream
+      //     'file': fs.createReadStream('/src/temp/dummy.txt')
       //   }
       // })
-      //
-      // req_stream.on('response', res => {
-      //   debug('upload complete')
-      // })
 
-      f.readStream.pipe(process.stdout)
+      f.readStream.pipe(new PassThrough()).pipe(fs.createWriteStream('./a.txt'))
+      fd_map.set(fd, f)
 
       return cb(len)
     }
@@ -415,6 +433,7 @@ exports.getMainContext = function(root, db, io, options) {
     } else {
       f.readStream
       .once('start', () => {
+        debug('listen start')
         f.readStream.emit('sourceData', copy)
         debug('len_in', copy.length)
         return cb(len)
