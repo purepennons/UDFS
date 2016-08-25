@@ -1,6 +1,6 @@
 {
   "db": {
-    "location": "/data/db/leveldb",
+    "location": "/data/db_meta/leveldb",
     "options": {
       "createIfMissing": true,
       "errorIfExists": false,

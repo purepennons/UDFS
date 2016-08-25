@@ -10,11 +10,9 @@ const http = require('http')
 const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 const req = require('request')
-const eos = require('end-of-stream')
-const PassThrough = require('stream').PassThrough
+const Buffer = require('buffer').Buffer
 
 const lib = require('../lib/lib')
-const CreateWriteIOStream = require('./lib/CreateWriteIOStream')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
@@ -129,26 +127,34 @@ exports.getMainContext = function(root, db, io, options) {
       let f = fd_map.get(fd)
       if(f) {
         debug('release')
-        if(f.readStream) {
-          f.readStream.emit('sourceEnd', null)
-          // f.readStream = null
-          // f.readStream.destroy()
+        if(f.buf) {
+          // upload the read stream
+          // real request
+          let req_stream = req.put({
+            url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+            encoding: null,
+            headers: {
+              'range': 'bytes=0-',
+            },
+            formData: {
+              'file': f.buf
+            }
+          })
 
-          // f.req_stream
-          // .on('response', res => {
-          //   debug('upload complete')
-          //   return cb(0)
-          // })
-          // .on('error', err => {
-          //   return cb(fuse['EIO'])
-          // })
+          req_stream
+          .on('response', res => {
+            fd_map.delete(fd)
+            debug('res', res)
+          })
+          .on('error', err => {
+            debug('response error', err.stack)
+          })
         }
       }
 
       fd_map.delete(fd)
       fd_count--
-      // return cb(0)
-      return
+      return cb(0)
     }
 
     if(fd) {
@@ -372,73 +378,46 @@ exports.getMainContext = function(root, db, io, options) {
     // first time to write, create the detail fo the file (if detial of the file not exists)
     debug('count', ++c)
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
-    // start_position: (offset % len)
-    let f = fd_map.get(fd)
-    if(!f) return cb(fuse['ENOENT'])
-    let s = f.stat
 
-    // copy needed as fuse overrides this buffer
-    let copy = new Buffer(len)
-    buf.copy(copy)
-    debug('len_out', copy.length)
+    try {
+      let f = fd_map.get(fd)
+      if(!f) return cb(fuse['ENOENT'])
+      let s = f.stat
 
-    if(!f.readStream) {
-      f.readStream = new CreateWriteIOStream(fd, {highWaterMark: 65536})
+      // copy needed as fuse overrides this buffer
+      let copy = new Buffer(len)
+      buf.copy(copy)
 
-      eos(f.readStream, err => {
-        debug('read stream error', err.stack)
-      })
+      if(!f.buf) {
+        f.buf = copy
+      } else {
+        f.buf = Buffer.concat([f.buf, copy])
+      }
 
-
-      f.readStream
-      .on('error', err => {
-        debug('err', err.stack)
-        f.readStream = null
-        fd_map.set(fd, f)
-        return cb(fuse['EIO'])
-      })
-      .on('stop', () => {
-        // do nothing
-        debug('stop')
-      })
-
-      f.readStream.emit('sourceData', copy)
-
-      // // just test the strea
-      // f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
-
-      // upload the read stream
-      // real request
-      // f.req_stream = req.put({
-      //   url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-      //   encoding: null,
-      //   headers: {
-      //     'range': 'bytes=0-',
-      //   },
-      //   formData: {
-      //     'file': fs.createReadStream('/src/temp/dummy.txt')
-      //   }
-      // })
-
-      f.readStream.pipe(new PassThrough()).pipe(fs.createWriteStream('./a.txt'))
       fd_map.set(fd, f)
-
       return cb(len)
+    } catch(err) {
+      debug('Write Error', err.stack)
+      return cb(fuse['EIO'])
     }
 
-    // 若是第二次以後，需監聽 `start` event，並確定 writable=true，才可以 push
-    if(f.readStream.writable) {
-      f.readStream.emit('sourceData', copy)
-      return cb(len)
-    } else {
-      f.readStream
-      .once('start', () => {
-        debug('listen start')
-        f.readStream.emit('sourceData', copy)
-        debug('len_in', copy.length)
-        return cb(len)
-      })
-    }
+    // // just test the stream
+    // f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
+
+    // upload the read stream
+    // real request
+    // f.req_stream = req.put({
+    //   url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+    //   encoding: null,
+    //   headers: {
+    //     'range': 'bytes=0-',
+    //   },
+    //   formData: {
+    //     'file': fs.createReadStream('/src/temp/dummy.txt')
+    //   }
+    // })
+
+    // f.readStream.pipe(new PassThrough()).pipe(fs.createWriteStream('./a.txt'))
 
   }
 
