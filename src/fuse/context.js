@@ -137,7 +137,7 @@ exports.getMainContext = function(root, db, io, options) {
               'range': 'bytes=0-',
             },
             formData: {
-              'file': f.buf
+              'file': Buffer.concat(f.buf)
             }
           })
 
@@ -389,13 +389,16 @@ exports.getMainContext = function(root, db, io, options) {
       buf.copy(copy)
 
       if(!f.buf) {
-        f.buf = copy
-      } else {
-        f.buf = Buffer.concat([f.buf, copy])
+        f.buf = []
+        f.count = 0
       }
+
+      f.buf.push(copy)
+      f.count++
 
       fd_map.set(fd, f)
       return cb(len)
+
     } catch(err) {
       debug('Write Error', err.stack)
       return cb(fuse['EIO'])
