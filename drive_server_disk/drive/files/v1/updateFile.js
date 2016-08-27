@@ -1,6 +1,7 @@
 "use strict"
 
 const debug = require('debug')('files')
+const eos = require('end-of-stream')
 const path = require('path')
 const xtend = require('xtend')
 const multiparty = require('multiparty')
@@ -56,63 +57,83 @@ module.exports = function updateFile(req, res, next) {
       err.status = 500
       next(err)
     })
-    form.on('part', part => {
+    .on('part', part => {
       // part is a readable stream
-      if(!part.filename || uploadFlag) part.resume()
+      if(!part.filename || uploadFlag) {
+        return part.resume()
+      } else {
+        // truncate the file to the correct size before pipeing the stream
+        fs.truncate(target, range[0].start, err => {
+          debug(`truncate the size of ${object_id} file to ${range[0].start}`)
+          if(err) {
+            debug('err', err)
+            err.status = 500
+            err.message = 'something wrong when truncate the file'
+            return next(err)
+          }
 
-      uploadFlag = true
-      let ws = fs.createWriteStream(target, {
-        flags: 'r+',
-        start: range[0].start
-      })
-
-      ws
-      .on('error', err => {
-        debug('err', err)
-        err.status = 500
-        err.message = 'something wrong when writing the data'
-        return next(err)
-      })
-      .on('close', () => {
-        async function updateMeta() {
-          let stat = await fs.statAsync(target)
-          // debug('stat', stat)
-
-          // update the metadata
-          let meta = {}
-          meta['stat'] = xtend(old_meta['stat'], stat)
-          let meta_fd = await fs.openAsync(meta_target, 'w')
-          await fs.writeAsync(meta_fd, JSON.stringify(meta))
-
-          // release
-          fs.close(meta_fd)
-          return meta
-        }
-
-        // update and response
-        updateMeta()
-        .then(stat => {
-          return res.status(200).json({
-            status: 'success',
-            message: `${object_id} object was updated from ${range[0].start} position`,
-            data: []
+          uploadFlag = true
+          let ws = fs.createWriteStream(target, {
+            flags: 'r+',
+            start: range[0].start
           })
-        })
-        .catch(err => {
-          debug('err', err)
-          err.status = 500
-          err.message = 'something wrong when updating the metadata'
-          return next(err)
-        })
-      })
+          .on('error', err => {
+            debug('err', err)
+            err.status = 500
+            err.message = 'something wrong when writing the data'
+            return next(err)
+          })
+          .on('close', () => {
+            async function updateMeta() {
+              let stat = await fs.statAsync(target)
+              // debug('stat', stat)
 
-      // write the data
-      part.pipe(ws)
+              // update the metadata
+              let meta = {}
+              meta['stat'] = xtend(old_meta['stat'], stat)
+              let meta_fd = await fs.openAsync(meta_target, 'w')
+              await fs.writeAsync(meta_fd, JSON.stringify(meta))
 
+              // release
+              fs.close(meta_fd)
+              return meta
+            }
+
+            // update and response
+            updateMeta()
+            .catch(err => {
+              debug('err', err)
+              err.status = 500
+              err.message = 'something wrong when updating the metadata'
+              return next(err)
+            })
+          })
+
+          // listen the status of stream
+          eos(part, err => {
+            if(err) {
+              debug('err', err.stack)
+              err.status = 500
+              err.message = 'upload stream failed'
+              return next(err)
+            }
+
+            debug('part stream end')
+          })
+
+          // write the data
+          part.pipe(ws)
+
+        })
+      }
     })
-    form.on('close', () => {
-      // do nothing
+    .on('close', () => {
       debug('form end')
+      return res.status(200).json({
+        status: 'success',
+        message: `${object_id} object was updated from ${range[0].start} position`,
+        data: []
+      })
     })
 
     // req parse
