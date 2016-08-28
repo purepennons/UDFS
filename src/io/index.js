@@ -12,6 +12,7 @@ const stat = require('../lib/stat')
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
 const files_ops = require('../secure_db/operations/files_ops')
+const general_ops = require('../secure_db/operations/general_ops')
 
 class IO {
   constructor(db) {
@@ -19,6 +20,7 @@ class IO {
     this.db = db
     this.fm_ops = file_metadata_ops(db.fileMetadata) // file metadata operations
     this.f_ops = files_ops(db.files) // files operation
+    this.storage_ops = general_ops(db.storageMetadata) // storage operations
   }
 
   /*

@@ -17,6 +17,7 @@ const lib = require('../lib/lib')
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
 const files_ops = require('../secure_db/operations/files_ops')
+const general_ops = require('../secure_db/operations/general_ops')
 
 // promisify
 fs.openAsync = Promise.promisify(fs.open)
@@ -46,6 +47,7 @@ exports.getMainContext = function(root, db, io, options) {
 
   let fm_ops = file_metadata_ops(db.fileMetadata) // file metadata operations
   let f_ops = files_ops(db.files) // files operation
+  let storage_ops = general_ops(db.storageMetadata) // storage operations
 
   // ops is the context of fuse
   let ops = {}
@@ -134,10 +136,16 @@ exports.getMainContext = function(root, db, io, options) {
             url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
             encoding: null,
             headers: {
-              'range': 'bytes=0-',
+              'range': 'bytes=0-'
             },
             formData: {
-              'file': Buffer.concat(f.buf)
+              custom_file: {
+                value: Buffer.concat(f.buf, f.buf_len),
+                options: {
+                  filename: 'file.binary',
+                  contentType: 'application/octet-stream'
+                }
+              }
             }
           })
 
@@ -391,10 +399,12 @@ exports.getMainContext = function(root, db, io, options) {
       if(!f.buf) {
         f.buf = []
         f.count = 0
+        f.buf_len = 0
       }
 
       f.buf.push(copy)
       f.count++
+      f.buf_len+=len
 
       fd_map.set(fd, f)
       return cb(len)
@@ -403,24 +413,6 @@ exports.getMainContext = function(root, db, io, options) {
       debug('Write Error', err.stack)
       return cb(fuse['EIO'])
     }
-
-    // // just test the stream
-    // f.readStream.pipe(fs.createWriteStream('./thedata.txt'))
-
-    // upload the read stream
-    // real request
-    // f.req_stream = req.put({
-    //   url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-    //   encoding: null,
-    //   headers: {
-    //     'range': 'bytes=0-',
-    //   },
-    //   formData: {
-    //     'file': fs.createReadStream('/src/temp/dummy.txt')
-    //   }
-    // })
-
-    // f.readStream.pipe(new PassThrough()).pipe(fs.createWriteStream('./a.txt'))
 
   }
 
