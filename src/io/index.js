@@ -72,6 +72,7 @@ class IO {
       // create a new file (only about metadata)
       R.FileMeta.create(dest.hostname, fs_id, meta)
       .then(res_meta => {
+        res_meta.dest = dest
         return resolve(res_meta)
       })
       .catch(err => {

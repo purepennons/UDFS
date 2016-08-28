@@ -1,7 +1,7 @@
 "use strict"
 
 // const
-const TEMP_STORAGE_ID = 'storage_id'
+const TEMP_STORAGE_ID = 'storage-1234567890'
 const TEMP_FS_ID = '70642310-3134-11e6-9e2f-3ffeaedf456b'
 
 /*

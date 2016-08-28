@@ -66,7 +66,7 @@ exports.getMainContext = function(root, db, io, options) {
     debug('getattr = %s', key)
 
     fm_ops.getStat(key, (err, s, k) => {
-      debug('getStat', err)
+      // debug('getStat error', err)
       if(err) return cb(fuse[err.code])
       debug('stat', s)
       return cb(0, s)
@@ -348,6 +348,8 @@ exports.getMainContext = function(root, db, io, options) {
       type: 'file'
     })
 
+    let file_id = basic_stat.file_id
+
     let meta = {
       stat: basic_stat
     }
@@ -365,17 +367,41 @@ exports.getMainContext = function(root, db, io, options) {
     async function create_gen() {
       try {
         let res_meta = await io.create(meta, io_params, fuse_params)
-        let theKey = await fm_ops.putAsync(key, res_meta)
-        debug('res_meta', res_meta)
-        debug('key', theKey)
-        return theKey
+
+        let file_meta = {
+          file_id: file_id,
+          meta: res_meta.meta,
+          object_info: {
+            etag: '', // current not used
+            version: 1,
+            storage_id: res_meta.dest.storage_id,
+            meta_id: res_meta.meta_id,
+            object_id: res_meta.object_id,
+            object_url: res_meta.object_url,
+            start: 0,
+            end: 0,
+            size: 0
+          }
+        }
+        debug('file_meta', file_meta)
+
+        let put_result = await Promise.all([
+          fm_ops.putAsync(key, file_meta),
+          f_ops.putAsync(file_id, {
+            chunk: [],
+            num_of_chunk: 0,
+            total_size: 0
+          })
+        ])
+        return put_result
       } catch(err) {
         throw err
       }
     }
 
     create_gen()
-    .then(k => ops.open(key, -1, cb))
+    // .then(k => cb(0))
+    .then(result => ops.open(key, -1, cb))
     .catch(err => cb(fuse[err.code]))
 
   }
