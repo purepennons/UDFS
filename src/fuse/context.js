@@ -298,7 +298,8 @@ exports.getMainContext = function(root, db, io, options) {
     let basic_stat = lib.statWrapper({
       mode: mode + octal(40000),  // octal(40000) means that the file is a directory
       size: DIRECTORY_SIZE,
-      type: 'directory'
+      type: 'directory',
+      path: key
     })
 
     let meta = {
@@ -345,7 +346,8 @@ exports.getMainContext = function(root, db, io, options) {
     let basic_stat = lib.statWrapper({
       mode: mode,
       size: 0,
-      type: 'file'
+      type: 'file',
+      path: key
     })
 
     let file_id = basic_stat.file_id

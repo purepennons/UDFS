@@ -27,6 +27,7 @@ class Stat {
     this.file_id = stat.file_id
   	this.type = stat.type // file or directory
     this.status = stat.status || true // set true when the file is allowed to access
+    this.path = stat.path
 
     this.blob = stat.blob  // not used, save binary
   }
