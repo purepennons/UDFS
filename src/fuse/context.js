@@ -89,36 +89,59 @@ exports.getMainContext = function(root, db, io, options) {
 
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
 
-    // async function open_gen() {
-    //   let stat = await fm_ops.getStatAsync(key)
-    //   let fileInfo = await
-    // }
-    //
-    // open_gen()
-    // .catch(err => cb(fuse[err.code]))
+    async function open_gen() {
+      let s = await fm_ops.getStatAsync(key)
+      let fileInfo = await f_ops.getAsync(s.file_id)
 
-
-    fm_ops.getStat(key, (err, s, k) => {
-      if(err) return cb(fuse[err.code])
-      debug('stat', s)
+      debug('s', s)
+      debug('fileInfo', fileInfo)
 
       let opened_file = {
-        path: key,
-        flag: flag, // -1 mean it is called from ops.create
-        file_id: s.file_id,
-        stat: s // maybe not sync, if it is accessed parallel
+        flag: flag,
+        stat: s,
+        fileInfo: fileInfo
       }
 
       // genUniqueKeyFromMap need to upgrad the algorithm
       // or it will process too much time to generate the fd number
       let fd = lib.genUniqueKeyFromMap(fd_map, fd_count, FD_MAX)
-      debug(`${key} -> fd =`, fd)
+      debug(`open ${key} -> fd = ${fd}`)
 
       fd_map.set(fd, opened_file)
       fd_count++
-      return cb(0, fd)
 
+      return fd
+    }
+
+    open_gen()
+    .then(fd => cb(0, fd))
+    .catch(err => {
+      if(fuse[err.code]) return cb(fuse[err.code])
+      debug('err', err.stack)
+      return cb(fuse['EPERM'])
     })
+
+    // fm_ops.getStat(key, (err, s, k) => {
+    //   if(err) return cb(fuse[err.code])
+    //   debug('stat', s)
+    //
+    //   let opened_file = {
+    //     path: key,
+    //     flag: flag, // -1 mean it is called from ops.create
+    //     file_id: s.file_id,
+    //     stat: s // maybe not sync, if it is accessed parallel
+    //   }
+    //
+    //   // genUniqueKeyFromMap need to upgrad the algorithm
+    //   // or it will process too much time to generate the fd number
+    //   let fd = lib.genUniqueKeyFromMap(fd_map, fd_count, FD_MAX)
+    //   debug(`${key} -> fd =`, fd)
+    //
+    //   fd_map.set(fd, opened_file)
+    //   fd_count++
+    //   return cb(0, fd)
+    //
+    // })
   }
 
   // need to release streams of read and write operations
@@ -426,8 +449,8 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     create_gen()
-    // .then(k => cb(0))
-    .then(result => ops.open(key, -1, cb))
+    .then(result => cb(0))
+    // .then(result => ops.open(key, -1, cb))
     .catch(err => cb(fuse[err.code]))
 
   }
