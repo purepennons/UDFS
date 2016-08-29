@@ -103,6 +103,19 @@ module.exports = function updateFile(req, res, next) {
 
               // update and response
               updateMeta()
+              .then(meta => {
+                return res.status(200).json({
+                  status: 'success',
+                  message: `${object_id} object was updated from ${range[0].start} position`,
+                  data: [{
+                    fs_id,
+                    meta_id,
+                    object_id,
+                    object_url: `/storage/v1/${fs_id}/files/${object_id}`,
+                    meta
+                  }]
+                })
+              })
               .catch(err => {
                 debug('err', err)
                 err.status = 500
@@ -131,11 +144,6 @@ module.exports = function updateFile(req, res, next) {
       })
       .on('close', () => {
         debug('form end')
-        return res.status(200).json({
-          status: 'success',
-          message: `${object_id} object was updated from ${range[0].start} position`,
-          data: []
-        })
       })
 
       // req parse

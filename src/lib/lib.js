@@ -9,7 +9,7 @@ exports.parseFlag = function(flag) {
       return 'r'  // O_RDONLY, 32768 = 0100000
     case 1:
       return 'w'  // O_WRONLY, 32769 = 0100001
-    case 2:
+    default:
       return 'r+' // O_RDWR, 32770 = 0100002, w+?
   }
 }

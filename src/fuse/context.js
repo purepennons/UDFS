@@ -97,7 +97,7 @@ exports.getMainContext = function(root, db, io, options) {
       debug('fileInfo', fileInfo)
 
       let opened_file = {
-        flag: flag,
+        flag: lib.parseFlag(flag),
         stat: s,
         fileInfo: fileInfo
       }
@@ -118,81 +118,89 @@ exports.getMainContext = function(root, db, io, options) {
     .catch(err => {
       if(fuse[err.code]) return cb(fuse[err.code])
       debug('err', err.stack)
-      return cb(fuse['EPERM'])
+      return cb(fuse['EBADF'])
     })
-
-    // fm_ops.getStat(key, (err, s, k) => {
-    //   if(err) return cb(fuse[err.code])
-    //   debug('stat', s)
-    //
-    //   let opened_file = {
-    //     path: key,
-    //     flag: flag, // -1 mean it is called from ops.create
-    //     file_id: s.file_id,
-    //     stat: s // maybe not sync, if it is accessed parallel
-    //   }
-    //
-    //   // genUniqueKeyFromMap need to upgrad the algorithm
-    //   // or it will process too much time to generate the fd number
-    //   let fd = lib.genUniqueKeyFromMap(fd_map, fd_count, FD_MAX)
-    //   debug(`${key} -> fd =`, fd)
-    //
-    //   fd_map.set(fd, opened_file)
-    //   fd_count++
-    //   return cb(0, fd)
-    //
-    // })
   }
 
   // need to release streams of read and write operations
   ops.release = function(key, fd, cb) {
     debug('release %s, fd = %s', key, fd)
 
-    function clearup() {
-      let f = fd_map.get(fd)
-      if(f) {
-        debug('release')
-        if(f.buf) {
-          // upload the read stream
-          // real request
-          let req_stream = req.put({
-            url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-            encoding: null,
-            headers: {
-              'range': 'bytes=0-'
-            },
-            formData: {
-              custom_file: {
-                value: Buffer.concat(f.buf, f.buf_len),
-                options: {
-                  filename: 'file.binary',
-                  contentType: 'application/octet-stream'
-                }
-              }
-            }
-          })
+    let f = fd_map.get(fd)
+    if(!f) return cb(0)
 
-          req_stream
-          .on('response', res => {
-            fd_map.delete(fd)
-            debug('res', res)
-          })
-          .on('error', err => {
-            debug('response error', err.stack)
-          })
+    let io_params = {
+      f: f
+    }
+
+    let fuse_params = {
+      key,
+      fd,
+      cb
+    }
+
+    async function release_gen() {
+      if(f.write) {
+        if(f.write.buf) {
+          let res_meta = await io.write(f.write.buf, io_params, fuse_params)
         }
       }
 
-      fd_map.delete(fd)
-      fd_count--
-      return cb(0)
+      if(f.read) {
+        if(f.read) {
+
+        }
+      }
     }
 
-    if(fd) {
-      clearup()
-    } else {
-      return cb(0)
-    }
+/***********************************************/
+    //
+    // function clearup() {
+    //   let f = fd_map.get(fd)
+    //   if(f) {
+    //     debug('release', f)
+    //     if(f.write.buf) {
+    //       // upload the read stream
+    //       // real request
+    //       req.put({
+    //         url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
+    //         encoding: null,
+    //         headers: {
+    //           'range': 'bytes=0-'
+    //         },
+    //         formData: {
+    //           custom_file: {
+    //             value: Buffer.concat(f.write.buf, f.write.buf_len),
+    //             options: {
+    //               filename: 'file.binary',
+    //               contentType: 'application/octet-stream'
+    //             }
+    //           }
+    //         }
+    //       }, (err, res, body) => {
+    //         if(err) return debug(err)
+    //         debug('body', JSON.parse(body.toString()))
+    //       })
+    //
+    //       // req_stream
+    //       // .on('response', res => {
+    //       //   fd_map.delete(fd)
+    //       //   debug('res', res)
+    //       //   debug('keys of res', Object.keys(res))
+    //       //   debug('body', res.body)
+    //       // })
+    //       // .on('error', err => {
+    //       //   debug('response error', err.stack)
+    //       // })
+    //     }
+    //   }
+    //
+    //   fd_map.delete(fd)
+    //   fd_count--
+    //   return cb(0)
+    // }
+    //
+    // clearup()
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
@@ -463,23 +471,33 @@ exports.getMainContext = function(root, db, io, options) {
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
 
     try {
+      /*
+       * f = {
+       * 		flag,
+       * 		stat,
+       * 		fileInfo
+       * }
+       */
       let f = fd_map.get(fd)
       if(!f) return cb(fuse['ENOENT'])
-      let s = f.stat
+
+      const writable_flag = ['w', 'w+']
+      if(!writable_flag.indexOf(f.flag)) return cb(fuse['EPERM'])
 
       // copy needed as fuse overrides this buffer
       let copy = new Buffer(len)
       buf.copy(copy)
 
-      if(!f.buf) {
-        f.buf = []
-        f.count = 0
-        f.buf_len = 0
+      if(!f.write) {
+        f.write = {}
+        f.write.buf = []
+        f.write.count = 0
+        f.write.buf_len = 0
       }
 
-      f.buf.push(copy)
-      f.count++
-      f.buf_len+=len
+      f.write.buf.push(copy)
+      f.write.count++
+      f.write.buf_len+=len
 
       fd_map.set(fd, f)
       return cb(len)

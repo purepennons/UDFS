@@ -169,17 +169,41 @@ File.get = function(host, fs_id, object_id, start, end) {
   })
 }
 
-File.update = function() {
-
+/*
+ * @param {object} file - a object contains filename, blob and len property
+ */
+File.update = function(host, fs_id, object_id, start, file) {
+  return new Promise((resolve,reject) => {
+    const url = [host, root_path, fs_id, '/files', `/${object_id}`].join('')
+    req.put({
+      url: url,
+      encoding: null,
+      headers: {
+        'range': `bytes=${start}-`
+      },
+      formData: {
+        custom_file: {
+          /*
+           * TODO: pass file.blob to middleware
+           */
+          value: Buffer.concat(file.blob, file.len),
+          options: {
+            filename: file.filename || object_id,
+            contentType: 'application/octet-stream'
+          }
+        }
+      }
+    }, (err, res, body) => {
+      if(err) return reject(err)
+      if(res.statusCode !== HTTPCode.OK) return reject(BAD_CODE)
+      return resolve(JSON.parse(body.toString()))
+    })
+  })
 }
 
 File.del = function() {
   // not implemented
 }
-
-// exports.read = function(options) {
-//   return fs.createReadStream('../fuse/fake_data/read')
-// }
 
 module.exports = {
   FileSystem,
