@@ -96,3 +96,7 @@ function genUniqueKeyFromMap(m, start=0, range=65535) {
   return genUniqueKeyFromMap(m, start, range)
 }
 exports.genUniqueKeyFromMap = genUniqueKeyFromMap
+
+exports.objWrapper = function(res_meta) {
+
+}
