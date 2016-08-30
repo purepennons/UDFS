@@ -24,3 +24,19 @@ exports.getMetaDest = function(ops) {
     hostname: 'http://localhost:3000'
   }
 }
+
+exports.getObjDest = function(ops) {
+  /*
+   * TODO: choosing the storage which registered
+   */
+
+  // just return a default storage
+  return {
+    storage_id: TEMP_STORAGE_ID,
+    fs_id: TEMP_FS_ID,
+    protocol: 'http',
+    host: 'localhost',
+    port: 3000,
+    hostname: 'http://localhost:3000'
+  }
+}

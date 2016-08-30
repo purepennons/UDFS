@@ -27,15 +27,15 @@ async function init() {
     })
 
     // mount fs
-    await ufs.mount()
+    let fuseContext = await ufs.mount()
     console.log(`File system is mounted at ${fs_options.mnt}`)
 
+    // fuseContext.events is a interface to interactive with fuse
+    return fuseContext
   } catch(err) {
     console.error('Initialization failed', err.stack)
     throw err
   }
-
-  return
 }
 
 // exit handler

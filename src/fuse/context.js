@@ -11,8 +11,10 @@ const constants = require('constants')  // node constants
 const Promise = require('bluebird')
 const req = require('request')
 const Buffer = require('buffer').Buffer
+const EventEmitter = require('events').EventEmitter
 
 const lib = require('../lib/lib')
+const Files = require('../lib/files')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
@@ -20,25 +22,12 @@ const files_ops = require('../secure_db/operations/files_ops')
 const general_ops = require('../secure_db/operations/general_ops')
 
 // promisify
-fs.openAsync = Promise.promisify(fs.open)
-const P_req = function(ops) {
-  return new Promise((resolve, reject) => {
-    http.request(ops, res => {
-      return resolve(res)
-    }).on('error', err => {
-      reject(err)
-    }).end()
-  })
-}
 
 // global values in the scope
 const FD_MAX = 65535
 const BLOCK_SIZE = 4096
 const DIRECTORY_SIZE = BLOCK_SIZE
 const ENOENT = -2
-
-let fd_count = 0
-
 
 exports.getMainContext = function(root, db, io, options) {
   if(!root || !db || !io) return null
@@ -56,12 +45,22 @@ exports.getMainContext = function(root, db, io, options) {
   let fd_map = new Map()
   let fd_count = 0
 
+  // listen storage register event, then adds to the map
+  let storage_map = new Map()
 
   // ops.options = ['direct_io', 'dev', 'debug']
   ops.options = options.options || []
 
-  // param: "key" === "path"
+  // Set to true to force mount the filesystem (will do an unmount first)
+  ops.force = true
 
+  // listen events
+  let e = new EventEmitter()
+  ops.events = e
+
+  // ops.events.on('test', t => console.log('GGGGG', t))
+
+  // param: "key" === "path"
   ops.getattr = function(key, cb) {
     debug('getattr = %s', key)
 
@@ -99,7 +98,7 @@ exports.getMainContext = function(root, db, io, options) {
       let opened_file = {
         flag: lib.parseFlag(flag),
         stat: s,
-        fileInfo: fileInfo
+        fileInfo: Files(fileInfo)
       }
 
       // genUniqueKeyFromMap need to upgrad the algorithm
@@ -130,7 +129,8 @@ exports.getMainContext = function(root, db, io, options) {
     if(!f) return cb(0)
 
     let io_params = {
-      f: f
+      f: f,
+      e: e
     }
 
     let fuse_params = {
@@ -139,9 +139,10 @@ exports.getMainContext = function(root, db, io, options) {
       cb
     }
 
-    async function release_gen() {
+    async function rw_gen() {
       if(f.write) {
         if(f.write.buf) {
+          debug('f.write')
           let res_meta = await io.write(f.write.buf, io_params, fuse_params)
         }
       }
@@ -152,6 +153,8 @@ exports.getMainContext = function(root, db, io, options) {
         }
       }
     }
+
+    rw_gen().catch(err => debug('rw_gen err', err.stack))
 
 /***********************************************/
     //
@@ -444,11 +447,7 @@ exports.getMainContext = function(root, db, io, options) {
 
         let put_result = await Promise.all([
           fm_ops.putAsync(key, file_meta),
-          f_ops.putAsync(file_id, {
-            chunk: [],
-            num_of_chunk: 0,
-            total_size: 0
-          })
+          f_ops.putAsync(file_id, Files({}))
         ])
         return put_result
       } catch(err) {

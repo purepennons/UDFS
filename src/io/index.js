@@ -3,11 +3,16 @@ const debug = require('debug')('fuse-io')
 const Promise = require('bluebird')
 const octal = require('octal')
 const uuid = require('node-uuid')
+const util = require('util')
+const Buffer = require('buffer').Buffer
 
 // IO requests must pass to middleware before handling the requests
 const R = require('./requests')
 const policy = require('./policy')
 const stat = require('../lib/stat')
+const lib = require('../lib/lib')
+const Chunk = require('../lib/chunk')
+const Files = require('../lib/files')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
@@ -44,9 +49,62 @@ class IO {
 
   /*
    * @param {object} source - source is a readable stream from write operation of FUSE
+   * @param {object} io_params - only has f property. (fileInfo, write, flag, stat)
+   * 目前 source 暫時是一個 buffer array e.g. [buf1, buf2, ..., bufn]
    */
-  write(source, fuse_params) {
-    // source need to pipe to a writestream
+  write(source, io_params, fuse_params) {
+    /*
+     * TODO:
+     * source 目前是 buffer array，可以先轉換成 read stream 再 transform，
+     * 最後再轉回 buffer (by concat-stream module)
+     */
+    return new Promise((resolve, reject) => {
+      async function write_gen() {
+        try {
+
+          let f = io_params.f
+
+          // if chunk array is empty, initial a object
+          if(f.fileInfo.chunk_arr.length === 0) {
+            // get a dest to store the object
+            let dest = policy.getObjDest(null)
+
+            // create a new file
+            let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
+            let first_obj = lib.objectWrapper({}, {
+              storage_id: dest.storage_id,
+              meta_id: res_meta.meta_id,
+              object_id: res_meta.meta_id,
+              object_url: res_meta.object_url
+            })
+            debug('first_obj', first_obj)
+
+            f.fileInfo.push(lib.chunkWrapper({}, {
+              chunk_order: 1,
+              read: [first_obj],
+              write: [first_obj],
+              chunk_size: 0,
+              current_size: 0
+            }))
+
+            debug('f.fileInfo', util.inspect(f.fileInfo, false, null))
+          }
+
+          // transform the data
+          // current: just concat the buffer
+          let w_data = Buffer.concat(f.write.buf, f.write.buf_len)
+
+          // start to write the data to storage
+          // await R.File.update()
+
+
+        } catch(err) {
+          throw err
+        }
+      }
+
+      write_gen().catch(err => debug('write_gen err', err.stack))
+    })
   }
 
   mkdir(meta, io_params, fuse_params) {

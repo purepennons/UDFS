@@ -2,6 +2,8 @@
 
 const debug = require('debug')('storage_metadata_ops')
 const xtend = require('xtend')
+const once = require('once')
+const concat = require('concat-stream')
 const Promise = require('bluebird')
 
 
@@ -23,6 +25,23 @@ module.exports = function(db) {
       if(err) return cb(err, null, key)
       return cb(null, obj, key)
     })
+  }
+
+  /*
+   * @param {object} ops - gt, lt, limit
+   * cb(err, data)
+   * 		- data: {
+   * 				key,
+   * 				value
+   * 			}
+   */
+  ops.getList = function(ops, cb) {
+    cb = once(cb)
+    db.createReadStream(ops)
+    .pipe(concat({encoding:'object'}, data => {
+      cb(null, data)
+    }))
+    .on('error', cb)
   }
 
   /**

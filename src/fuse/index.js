@@ -28,7 +28,7 @@ class UserspaceFS {
       // mount
       fuse.mount(this.root, fuseContext, err => {
         if(err) return reject(err)
-        return resolve()
+        return resolve(fuseContext)
       })
 
     })
