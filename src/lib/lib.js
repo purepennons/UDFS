@@ -2,6 +2,7 @@
 
 const _ = require('lodash')
 const uuid = require('node-uuid')
+const xtend = require('xtend')
 
 exports.parseFlag = function(flag) {
   switch(flag & 3) {
@@ -86,6 +87,31 @@ exports.fileInfoWrapper = function(fileInfo) {
   fileInfo.total_size = fileInfo.total_size || 0
 }
 
+exports.objectWrapper = function(origin, extend) {
+  const must_props = ['etag', 'version', 'storage_id', 'meta_id', 'object_id', 'object_url', 'start', 'end', 'size']
+
+  if(!origin) origin = {}
+  let update_obj = xtend(origin, extend)
+
+  // 補足不齊的屬性，並初始化
+  update_obj['etag'] = update_obj['etag'] || ''
+  update_obj['version'] = update_obj['version'] || 1
+  update_obj['storage_id'] = update_obj['storage_id'] || ''
+  update_obj['meta_id'] = update_obj['meta_id'] || ''
+  update_obj['object_id'] = update_obj['object_id'] || ''
+  update_obj['object_url'] = update_obj['object_url'] || ''
+  update_obj['start'] = update_obj['start'] || 0
+  update_obj['end'] = update_obj['end'] || 0
+  update_obj['size'] = update_obj['size'] || 0
+
+  // delete redundant props
+  _
+  .xor(Object.keys(update_obj), must_props)
+  .forEach(prop => delete update_obj[prop])
+
+  return update_obj
+}
+
 function genUniqueKeyFromMap(m, start=0, range=65535) {
   if(!m) throw new Error('Without a map param')
   if(start+1 <= 65536 && !m.has(start+1)) return start + 1
@@ -96,7 +122,3 @@ function genUniqueKeyFromMap(m, start=0, range=65535) {
   return genUniqueKeyFromMap(m, start, range)
 }
 exports.genUniqueKeyFromMap = genUniqueKeyFromMap
-
-exports.objWrapper = function(res_meta) {
-
-}
