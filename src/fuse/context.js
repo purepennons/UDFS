@@ -385,7 +385,8 @@ exports.getMainContext = function(root, db, io, options) {
             start: 0,
             end: 0,
             size: 0
-          }
+          },
+          path: key
         }
         debug('file_meta', file_meta)
 
@@ -407,10 +408,6 @@ exports.getMainContext = function(root, db, io, options) {
     .then(k => cb(0))
     .catch(err => cb(fuse[err.code]))
 
-    // fm_ops.put(key, lib.statWrapper(s, true), (err, k) => {
-    //   if(err) return cb(fuse[err.code])
-    //   return cb(0)
-    // })
   }
 
   ops.create = function(key, mode, cb) {
@@ -459,7 +456,8 @@ exports.getMainContext = function(root, db, io, options) {
             start: 0,
             end: 0,
             size: 0
-          }
+          },
+          path: key
         }
         debug('file_meta', file_meta)
 

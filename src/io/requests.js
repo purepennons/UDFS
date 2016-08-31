@@ -17,6 +17,17 @@ const P_Req = function(ops) {
   })
 }
 
+const parseData = function(body, resolve, reject) {
+  try {
+    let res_body = JSON.parse(body.toString())
+    if(res_body.status !== 'success') return reject(OP_ERROR)
+    return resolve(res_body.data[0])
+  } catch(err) {
+    debug('json parse error', err.stack)
+    return reject(OP_ERROR)
+  }
+}
+
 // error code
 const BAD_CODE = new Error('bad http code')
 BAD_CODE.code = 'EREMOTEIO'
@@ -35,7 +46,8 @@ FileSystem.create = function(host) {
   return new Promise((resolve, reject) => {
     req.post(url, (err, res, body) => {
       if(err) return reject(err)
-      return resolve(res)
+      if(res.statusCode !== HTTPCode.CREATED) return reject(BAD_CODE)
+      parseData(body, resolve, reject)
     })
   })
 }
@@ -64,14 +76,7 @@ FileMeta.create = function(host, fs_id, meta) {
       }, (err, res, body) => {
         if(err) return reject(err)
         if(res.statusCode !== HTTPCode.CREATED) return reject(BAD_CODE)
-        try {
-          let res_body = JSON.parse(body.toString())
-          if(res_body.status !== 'success') return reject(OP_ERROR)
-          return resolve(res_body.data[0])
-        } catch(err) {
-          debug('json parse error', err.stack)
-          return reject(OP_ERROR)
-        }
+        parseData(body, resolve, reject)
       })
     } catch(err) {
       return reject(err)
@@ -86,14 +91,7 @@ FileMeta.get = function(host, fs_id, meta_id) {
     req.get(url, (err, res, body) => {
       if(err) return reject(err)
       if(res.statusCode !== HTTPCode.OK) return reject(BAD_CODE)
-      try {
-        let res_body = JSON.parse(body.toString())
-        if(res_body.status !== 'success') return reject(OP_ERROR)
-        return resolve(res_body.data[0])
-      } catch(err) {
-        debug('json parse error', err.stack)
-        return reject(OP_ERROR)
-      }
+      parseData(body, resolve, reject)
     })
   })
 }
@@ -115,7 +113,9 @@ FileMeta.update = function(host, fs_id, meta_id, updateMeta) {
         body: `meta=${updateMeta}`
       }, (err, res, body) => {
         if(err) return reject(err)
-        if(res.statusCode === HTTPCode.OK || res.statusCode === HTTPCode.NOT_MODIFIED) return resolve(JSON.parse(body))
+        if(res.statusCode === HTTPCode.OK || res.statusCode === HTTPCode.NOT_MODIFIED) {
+          parseData(body, resolve, reject)
+        }
         return reject(BAD_CODE)
       })
     } catch(err) {
@@ -130,7 +130,9 @@ FileMeta.del = function(host, fs_id, meta_id) {
   return new Promise((resolve, reject) => {
     req.delete(url, (err, res, body) => {
       if(err) return reject(err)
-      if(res.statusCode === HTTPCode.NO_CONTENT || res.statusCode === HTTPCode.NOT_FOUND) return resolve(JSON.parse(body))
+      if(res.statusCode === HTTPCode.NO_CONTENT || res.statusCode === HTTPCode.NOT_FOUND) {
+        parseData(body, resolve, reject)
+      }
       return reject(BAD_CODE)
     })
   })
@@ -208,14 +210,7 @@ File.update = function(host, fs_id, object_id, start, file) {
     }, (err, res, body) => {
       if(err) return reject(err)
       if(res.statusCode !== HTTPCode.OK) return reject(BAD_CODE)
-      try {
-        let res_body = JSON.parse(body.toString())
-        if(res_body.status !== 'success') return reject(OP_ERROR)
-        return resolve(res_body.data[0])
-      } catch(err) {
-        debug('json parse error', err.stack)
-        return reject(OP_ERROR)
-      }
+      parseData(body, resolve, reject)
     })
   })
 }
