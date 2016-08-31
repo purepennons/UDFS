@@ -239,65 +239,64 @@ exports.getMainContext = function(root, db, io, options) {
      * 終止條件尚未完善
      * 目前：下個 offset (next_offset) 等於下次 fuse request 的 offset 時 (意味連續的 request)，
      * 沿用之前的 Stream。
-     * 若 f.stream 存在，next_offset 卻不等於 offset，則銷毀 Stream，重新建立
+     * 若 f.read.stream 存在，next_offset 卻不等於 offset，則銷毀 Stream，重新建立
      */
-    async function gen(f) {
+    async function gen() {
       // end condition
-      console.log(f)
-      if(f.stream && f.next_offset !== offset) {
-        // destory the stream
-        f.stream.destroy()
-        f.stream = null
+      if(f.read) {
+        if(f.read.stream && f.read.next_offset !== offset) {
+          // destory the stream
+          f.read.stream.destroy()
+          f.read.stream = null
 
-        fd_map.set(fd, f)
+          fd_map.set(fd, f)
+        }
       }
-
-      if(!f.stream) {
+      
+      if(!f.read) {
         await initStream()
       }
 
       loop()
 
       async function initStream() {
-        // let ops = {
-        //   hostname: 'localhost',
-        //   port: 3000,
-        //   path: `/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-        //   method: 'GET',
-        //   headers: {
-        //     'Range': `bytes=${offset}-`
-        //   },
-        //   encoding: null
-        // }
+        f.read = {}
 
-        // let res = await P_req(ops)
+        let io_params = {
+          f: f,
+          e: e,
+          s_map: s_map
+        }
 
-        // get the read stream from IO request (read)
-        f.stream = await io.read({
+        let fuse_params = {
           key,
           fd,
           buf,
           len,
           offset,
           cb
-        })
-        // if change to other stream source, maybe need to set the encording to null(binary).
-        // f.stream.setEncoding(null)
+        }
 
-        f.stream
+        // get the read stream from IO request (read)
+        f.read.stream = await io.read(io_params, fuse_params)
+
+        // if change to other stream source, maybe need to set the encording to null(binary).
+        // f.read.stream.setEncoding(null)
+
+        f.read.stream
         .on('error', err => {
           debug('[ERROR]-read', err.stack)
-          return cb(fuse['EIO'])
+          return cb(fuse['EREMOTEIO'])
         })
         .on('end', () => {
           // destory the stream
-          f.stream.destroy()
-          f.stream = null
+          f.read.stream.destroy()
+          f.read.stream = null
 
           fd_map.set(fd, f)
         })
 
-        f.offset = offset
+        f.read.offset = offset
         fd_map.set(fd, f)
       }
 
@@ -306,10 +305,10 @@ exports.getMainContext = function(root, db, io, options) {
         debug('len=%s, offset=%s', len, offset)
         if(len <= 0) return cb(0)
 
-        let result = f.stream.read(len)
-        if(!result) return f.stream.once('readable', loop)
+        let result = f.read.stream.read(len)
+        if(!result) return f.read.stream.once('readable', loop)
         result.copy(buf)
-        f.next_offset = offset + len
+        f.read.next_offset = offset + len
         fd_map.set(fd, f)
 
         debug('result length = %s', result.length)
@@ -317,12 +316,10 @@ exports.getMainContext = function(root, db, io, options) {
       }
     }
 
-    gen(f)
-    .then(handledLength => {
-      // return cb(handledLength)
-    }).catch(err => {
-      console.log(err)
-      return cb(fuse['EIO'])
+    gen()
+    .catch(err => {
+      debug('read err', err.stack)
+      return cb(fuse['EREMOTEIO'])
     })
 
 

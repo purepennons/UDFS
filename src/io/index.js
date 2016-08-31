@@ -19,6 +19,17 @@ const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
 const files_ops = require('../secure_db/operations/files_ops')
 const general_ops = require('../secure_db/operations/general_ops')
 
+function err_handler(err) {
+  switch(err.code) {
+    case 'NOTFOUND':
+      err.code = 'ENODEV'
+      break
+    default:
+      err.code = 'EREMOTEIO'
+  }
+  throw err
+}
+
 class IO {
   constructor(db) {
     if(!db) throw new Error('Without a leveldb instance for IO class.')
@@ -32,19 +43,39 @@ class IO {
    * @param {object} fuse_params - fuse_params are equal to the params of operations of FUSE
    */
   // need to impelement all io methods for fuse operations
-  read(fuse_params) {
+  async read(io_params, fuse_params) {
     // retuan a readStream
-    return new Promise((resolve, reject) => {
-      R.File.get('http://localhost:3000', '70642310-3134-11e6-9e2f-3ffeaedf456b', 'e60aa7c4-732e-406f-8697-f0311803f237', fuse_params.offset, null)
-      .then(rs => {
-        // pass middleware here. e.g. resolve(mid2(mid1(rs))) or resolve(rs.pipe(mid1).pipe(mid2)) where mid is a function will return a read stream or a transform stream
-        return resolve(rs)
-      })
-      .catch(err => {
-        if(!err.code) err.code = 'EIO'
-        return reject(err)
-      })
-    })
+    debug('io_params', util.inspect(io_params, false, null))
+    try {
+      /*
+      * 假設目前一個 file 只會有一個 chunk。
+      * 每個 chunk 的 object 來源只會有一個。
+      */
+
+      let f = io_params.f
+      let chunk = f.fileInfo.chunk_arr[0] // read only
+      let objInfo = chunk.read[0] // read only
+      let storage_id = objInfo.storage_id
+
+      // get storage info
+      // try to query from memory
+      let dest = io_params.s_map.get(storage_id)
+
+      // query from DB
+      if(!dest) {
+        dest = await this.storage_ops.getAsync(storage_id)
+        // update the s_map
+        io_params.e.emit('REGISTER_STORAGE', {key: storage_id, value: dest})
+      }
+
+      let rs = await R.File.get(dest.hostname, dest.fs_id, objInfo.object_id, fuse_params.offset, null)
+      // pass middleware here. e.g. resolve(mid2(mid1(rs))) or resolve(rs.pipe(mid1).pipe(mid2)) where mid is a function will return a read stream or a transform stream
+
+      return rs
+      
+    } catch(err) {
+      err_handler(err)
+    }
   }
 
   /*
@@ -89,13 +120,19 @@ class IO {
         debug('f.fileInfo', util.inspect(f.fileInfo, false, null))
       }
 
-      // 暫時只允許一個 chunk
-      // get storage info
+      /*
+      * 假設目前一個 file 只會有一個 chunk。
+      * 每個 chunk 的 object 來源只會有一個。
+      */
       let chunk = f.fileInfo.chunk_arr.pop()
       let objInfo = chunk.write.pop()
       let storage_id = objInfo.storage_id
+
+      // get storage info
+      // try to query from memory
       let dest = io_params.s_map.get(storage_id)
 
+      // query from DB
       if(!dest) {
         dest = await this.storage_ops.getAsync(storage_id)
         // update the s_map
@@ -137,11 +174,13 @@ class IO {
         // DB#fileMeta
         // lib.statWrapper will update the atime and mtime
         update_res.meta.stat.file_id = f.stat.file_id
+        update_res.meta.stat.path = fuse_params.key
         update_res.meta.stat = lib.statWrapper(update_res.meta.stat, true, {atimeUpdate: true, mtimeUpdate: true})
         let update_file_meta = lib.fileMetaWrapper({}, {
           file_id: f.stat.file_id,
           meta: update_res.meta,
-          object_info: w_update_obj
+          object_info: w_update_obj,
+          path: fuse_params.key
         })
 
         // DB#files
@@ -184,14 +223,7 @@ class IO {
       return await updateDB()
 
     } catch(err) {
-      switch(err.code) {
-        case 'NOTFOUND':
-          err.code = 'ENODEV'
-          break
-        default:
-          err.code = 'EREMOTEIO'
-      }
-      throw err
+      err_handler(err)
     }
   }
 
@@ -222,7 +254,10 @@ class IO {
         return resolve(res_meta)
       })
       .catch(err => {
-        if(!err.code) err.code = 'EIO'
+        switch(err.code) {
+          default:
+            err.code = 'EREMOTEIO'
+        }
         return reject(err)
       })
     })
