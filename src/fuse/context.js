@@ -41,24 +41,29 @@ exports.getMainContext = function(root, db, io, options) {
   // ops is the context of fuse
   let ops = {}
 
-  // global values in the scope
-  let fd_map = new Map()
-  let fd_count = 0
-
-  // listen storage register event, then adds to the map
-  let storage_map = new Map()
-
   // ops.options = ['direct_io', 'dev', 'debug']
   ops.options = options.options || []
 
   // Set to true to force mount the filesystem (will do an unmount first)
   ops.force = true
 
+  // global values in the scope
+  let fd_map = new Map()
+  let fd_count = 0
+
+  // listen "REGISTER_STORAGE" event, then adds new storage to the map
+  let s_map = new Map()
+
   // listen events
   let e = new EventEmitter()
   ops.events = e
 
-  // ops.events.on('test', t => console.log('GGGGG', t))
+  // data.key = storage_id, data.value = storage_info
+  e.on('REGISTER_STORAGE', data => {
+    debug('listen REGISTER_STORAGE', data)
+    return s_map.set(data.key, data.value)
+  })
+
 
   // param: "key" === "path"
   ops.getattr = function(key, cb) {
@@ -87,12 +92,12 @@ exports.getMainContext = function(root, db, io, options) {
     debug('open = %s, flag = %s', key, flag)
 
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
-
     async function open_gen() {
       let s = await fm_ops.getStatAsync(key)
+      debug('s', s)
+      debug('s.file_id', s.file_id)
       let fileInfo = await f_ops.getAsync(s.file_id)
 
-      debug('s', s)
       debug('fileInfo', fileInfo)
 
       let opened_file = {
@@ -115,8 +120,8 @@ exports.getMainContext = function(root, db, io, options) {
     open_gen()
     .then(fd => cb(0, fd))
     .catch(err => {
-      if(fuse[err.code]) return cb(fuse[err.code])
       debug('err', err.stack)
+      if(fuse[err.code]) return cb(fuse[err.code])
       return cb(fuse['EBADF'])
     })
   }
@@ -130,7 +135,8 @@ exports.getMainContext = function(root, db, io, options) {
 
     let io_params = {
       f: f,
-      e: e
+      e: e,
+      s_map: s_map
     }
 
     let fuse_params = {
@@ -142,7 +148,7 @@ exports.getMainContext = function(root, db, io, options) {
     async function rw_gen() {
       if(f.write) {
         if(f.write.buf) {
-          debug('f.write')
+          debug('release#f.write')
           let res_meta = await io.write(f.write.buf, io_params, fuse_params)
         }
       }
@@ -154,7 +160,16 @@ exports.getMainContext = function(root, db, io, options) {
       }
     }
 
-    rw_gen().catch(err => debug('rw_gen err', err.stack))
+    rw_gen()
+    .then(() => {
+      fd_map.delete(fd)
+      fd_count--
+      return cb(0)
+    })
+    .catch(err => {
+      debug('err', err.stack)
+      cb(fuse[err])
+    })
 
 /***********************************************/
     //
@@ -355,6 +370,8 @@ exports.getMainContext = function(root, db, io, options) {
     async function mkdir_gen() {
       try {
         let res_meta = await io.mkdir(meta, io_params, fuse_params)
+        res_meta.meta.stat.file_id = file_id
+        res_meta.meta.stat.path = key
         let file_meta = {
           file_id: file_id,
           meta: res_meta.meta,
@@ -427,10 +444,11 @@ exports.getMainContext = function(root, db, io, options) {
     async function create_gen() {
       try {
         let res_meta = await io.create(meta, io_params, fuse_params)
-
+        res_meta.meta.stat.file_id = file_id
+        res_meta.meta.stat.path = key
         let file_meta = {
           file_id: file_id,
-          meta: res_meta.meta,
+          meta: res_meta.meta,  // only contain the stat now
           object_info: {
             etag: '', // current not used
             version: 1,
@@ -456,8 +474,7 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     create_gen()
-    .then(result => cb(0))
-    // .then(result => ops.open(key, -1, cb))
+    .then(result => ops.open(key, -1, cb))
     .catch(err => cb(fuse[err.code]))
 
   }
@@ -490,11 +507,13 @@ exports.getMainContext = function(root, db, io, options) {
       if(!f.write) {
         f.write = {}
         f.write.buf = []
+        f.write.offsets = [] // 有待確認運作機制
         f.write.count = 0
         f.write.buf_len = 0
       }
 
       f.write.buf.push(copy)
+      f.write.offsets.push(offset)
       f.write.count++
       f.write.buf_len+=len
 

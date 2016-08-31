@@ -49,62 +49,150 @@ class IO {
 
   /*
    * @param {object} source - source is a readable stream from write operation of FUSE
-   * @param {object} io_params - only has f property. (fileInfo, write, flag, stat)
+   * @param {object} io_params - has f(fileInfo, write, flag, stat), e, s_map properties.
    * 目前 source 暫時是一個 buffer array e.g. [buf1, buf2, ..., bufn]
    */
-  write(source, io_params, fuse_params) {
+  async write(source, io_params, fuse_params) {
     /*
      * TODO:
-     * source 目前是 buffer array，可以先轉換成 read stream 再 transform，
+     * 1. source 目前是 buffer array，可以先轉換成 read stream 再 transform，
      * 最後再轉回 buffer (by concat-stream module)
+     * 2. 允許多個 chunk
      */
-    return new Promise((resolve, reject) => {
-      async function write_gen() {
-        try {
+    try {
 
-          let f = io_params.f
+      let f = io_params.f
 
-          // if chunk array is empty, initial a object
-          if(f.fileInfo.chunk_arr.length === 0) {
-            // get a dest to store the object
-            let dest = policy.getObjDest(null)
+      // if chunk array is empty, initial a object
+      if(f.fileInfo.chunk_arr.length === 0) {
+        // get a dest to store the object
+        let dest = policy.getObjDest(null)
 
-            // create a new file
-            let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
-            let first_obj = lib.objectWrapper({}, {
-              storage_id: dest.storage_id,
-              meta_id: res_meta.meta_id,
-              object_id: res_meta.meta_id,
-              object_url: res_meta.object_url
-            })
-            debug('first_obj', first_obj)
+        // create a new file
+        let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
+        let first_obj = lib.objectWrapper({}, {
+          storage_id: dest.storage_id,
+          meta_id: res_meta.meta_id,
+          object_id: res_meta.meta_id,
+          object_url: res_meta.object_url
+        })
+        debug('first_obj', first_obj)
 
-            f.fileInfo.push(lib.chunkWrapper({}, {
-              chunk_order: 1,
-              read: [first_obj],
-              write: [first_obj],
-              chunk_size: 0,
-              current_size: 0
-            }))
+        f.fileInfo.push(lib.chunkWrapper({}, {
+          chunk_order: 1,
+          read: [first_obj],
+          write: [first_obj],
+          chunk_size: 0,
+          current_size: 0
+        }))
 
-            debug('f.fileInfo', util.inspect(f.fileInfo, false, null))
-          }
+        debug('f.fileInfo', util.inspect(f.fileInfo, false, null))
+      }
 
-          // transform the data
-          // current: just concat the buffer
-          let w_data = Buffer.concat(f.write.buf, f.write.buf_len)
+      // 暫時只允許一個 chunk
+      // get storage info
+      let chunk = f.fileInfo.chunk_arr.pop()
+      let objInfo = chunk.write.pop()
+      let storage_id = objInfo.storage_id
+      let dest = io_params.s_map.get(storage_id)
 
-          // start to write the data to storage
-          // await R.File.update()
+      if(!dest) {
+        dest = await this.storage_ops.getAsync(storage_id)
+        // update the s_map
+        io_params.e.emit('REGISTER_STORAGE', {key: storage_id, value: dest})
+      }
 
+      // transform the data
+      // current: just concat the buffer
+      let w_data = Buffer.concat(f.write.buf, f.write.buf_len)
 
-        } catch(err) {
-          throw err
+      // start to write the data to storage
+      let update_res = await R.File.update(dest.hostname, dest.fs_id, objInfo.object_id, f.write.offsets[0], {
+        filename: objInfo.object_id,
+        blob: w_data,
+        len: f.write.buf_len
+      })
+      debug('update_res', util.inspect(update_res, false, null))
+
+      // update fileMetadata & files
+      /*
+       * TODO:
+       * 1. update remote metadata of main file
+       * 2. check read/write source is needed to update or not
+       */
+
+      const updateDB = async () => {
+        // don't forget to update atime and mtime
+        let w_update_obj = lib.objectWrapper(objInfo, {
+          etag: '',
+          version: objInfo.version + 1,
+          meta_id: update_res.meta_id,
+          object_id: update_res.object_id,
+          object_url: update_res.object_url,
+          start: f.write.offsets[0],  // 實際上應該加上上一個 current_size
+          end: f.write.offsets[0] + update_res.meta.stat.size,
+          size: update_res.meta.stat.size
+        })
+
+        // DB#fileMeta
+        // lib.statWrapper will update the atime and mtime
+        update_res.meta.stat.file_id = f.stat.file_id
+        update_res.meta.stat = lib.statWrapper(update_res.meta.stat, true, {atimeUpdate: true, mtimeUpdate: true})
+        let update_file_meta = lib.fileMetaWrapper({}, {
+          file_id: f.stat.file_id,
+          meta: update_res.meta,
+          object_info: w_update_obj
+        })
+
+        // DB#files
+        /*
+         * TODO: 確認是否要更新 chunk.read
+         */
+        chunk.write.push(w_update_obj)
+
+        if(!lib.isSameSrc(chunk.read[0], w_update_obj)) {
+          chunk.read.unshift(w_update_obj)
+        }
+        let update_chunk = lib.chunkWrapper(chunk, {
+          write: chunk.write,
+          read: chunk.read,
+          chunk_size: w_update_obj.size,
+          current_size: 0 // not used
+        })
+
+        // push chunk to fileInfo.chunk_arr
+        f.fileInfo.push(update_chunk, w_update_obj.size)
+
+        debug('stat', f.stat)
+        debug('w_update_obj', util.inspect(w_update_obj, false, null))
+        debug('update_file_meta', util.inspect(update_file_meta, false, null))
+        debug('update_chunk', util.inspect(update_chunk, false, null))
+        debug('f.fileInfo', util.inspect(f.fileInfo, false, null))
+
+        // update DB
+        await Promise.all([
+          this.fm_ops.updateAsync(fuse_params.key, update_file_meta),
+          this.f_ops.updateAsync(f.stat.file_id, f.fileInfo)
+        ])
+
+        return {
+          fileMeta: update_file_meta,
+          fileInfo: f.fileInfo
         }
       }
 
-      write_gen().catch(err => debug('write_gen err', err.stack))
-    })
+      return await updateDB()
+
+    } catch(err) {
+      switch(err.code) {
+        case 'NOTFOUND':
+          err.code = 'ENODEV'
+          break
+        default:
+          err.code = 'EREMOTEIO'
+      }
+      throw err
+    }
   }
 
   mkdir(meta, io_params, fuse_params) {

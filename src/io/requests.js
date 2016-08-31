@@ -64,9 +64,14 @@ FileMeta.create = function(host, fs_id, meta) {
       }, (err, res, body) => {
         if(err) return reject(err)
         if(res.statusCode !== HTTPCode.CREATED) return reject(BAD_CODE)
-        body = JSON.parse(body)
-        if(body.status === 'error') return reject(OP_ERROR)
-        return resolve(body.data[0])
+        try {
+          let res_body = JSON.parse(body.toString())
+          if(res_body.status !== 'success') return reject(OP_ERROR)
+          return resolve(res_body.data[0])
+        } catch(err) {
+          debug('json parse error', err.stack)
+          return reject(OP_ERROR)
+        }
       })
     } catch(err) {
       return reject(err)
@@ -81,7 +86,14 @@ FileMeta.get = function(host, fs_id, meta_id) {
     req.get(url, (err, res, body) => {
       if(err) return reject(err)
       if(res.statusCode !== HTTPCode.OK) return reject(BAD_CODE)
-      return resolve(JSON.parse(body))
+      try {
+        let res_body = JSON.parse(body.toString())
+        if(res_body.status !== 'success') return reject(OP_ERROR)
+        return resolve(res_body.data[0])
+      } catch(err) {
+        debug('json parse error', err.stack)
+        return reject(OP_ERROR)
+      }
     })
   })
 }
@@ -186,7 +198,7 @@ File.update = function(host, fs_id, object_id, start, file) {
           /*
            * TODO: pass file.blob to middleware
            */
-          value: Buffer.concat(file.blob, file.len),
+          value: file.blob,
           options: {
             filename: file.filename || object_id,
             contentType: 'application/octet-stream'
@@ -196,7 +208,14 @@ File.update = function(host, fs_id, object_id, start, file) {
     }, (err, res, body) => {
       if(err) return reject(err)
       if(res.statusCode !== HTTPCode.OK) return reject(BAD_CODE)
-      return resolve(JSON.parse(body.toString()))
+      try {
+        let res_body = JSON.parse(body.toString())
+        if(res_body.status !== 'success') return reject(OP_ERROR)
+        return resolve(res_body.data[0])
+      } catch(err) {
+        debug('json parse error', err.stack)
+        return reject(OP_ERROR)
+      }
     })
   })
 }

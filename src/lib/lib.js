@@ -68,6 +68,7 @@ exports.statWrapper = function(s, status=false, options={atimeUpdate: true, mtim
   // update
   s.status = status
   if(options.atimeUpdate) s.atime = new Date()
+  if(options.mtimeUpdate) s.mtime = new Date()
 
   return s
 }
@@ -85,6 +86,26 @@ exports.fileInfoWrapper = function(fileInfo) {
   fileInfo.chunk_list = fileInfo.chunk_list || []
   fileInfo.num_of_chunk = fileInfo.chunk_list.length
   fileInfo.total_size = fileInfo.total_size || 0
+}
+
+exports.fileMetaWrapper = function(origin, extend) {
+  const must_props = ['file_id', 'meta', 'object_info']
+
+  if(!origin) origin = {}
+  let update_obj = xtend(origin, extend)
+
+  // 補足不齊的屬性，並初始化
+  update_obj['file_id'] = update_obj['file_id'] || ''
+  update_obj['meta'] = update_obj['meta'] || 1
+  update_obj['object_info'] = update_obj['object_info'] || ''
+
+  // delete redundant props
+  _
+  .xor(Object.keys(update_obj), must_props)
+  .forEach(prop => delete update_obj[prop])
+
+  return update_obj
+
 }
 
 exports.objectWrapper = function(origin, extend) {
@@ -110,6 +131,31 @@ exports.objectWrapper = function(origin, extend) {
   .forEach(prop => delete update_obj[prop])
 
   return update_obj
+}
+
+exports.chunkWrapper = function(origin, extend) {
+  const must_props = ['chunk_order', 'read', 'write', 'chunk_size', 'current_size']
+
+  if(!origin) origin = {}
+  let update_obj = xtend(origin, extend)
+
+  // 補足不齊的屬性，並初始化
+  update_obj['chunk_order'] = update_obj['chunk_order'] || -1
+  update_obj['read'] = update_obj['read'] || []
+  update_obj['write'] = update_obj['write'] || []
+  update_obj['chunk_size'] = update_obj['chunk_size'] || 0
+  update_obj['current_size'] = update_obj['current_size'] || 0
+
+  // delete redundant props
+  _
+  .xor(Object.keys(update_obj), must_props)
+  .forEach(prop => delete update_obj[prop])
+
+  return update_obj
+}
+
+exports.isSameSrc = function(obj1, obj2) {
+  return (obj1.storage_id === obj2.storage_id) & (obj1.object_id === obj2.object_id)
 }
 
 function genUniqueKeyFromMap(m, start=0, range=65535) {

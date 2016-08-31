@@ -164,7 +164,6 @@ module.exports = function(db) {
 			// updates all properties
 			// file will be the data to be updated
 			Object.keys(modify_data).map(prop => {
-				debug('prop', prop)
 				file[prop] = xtend(file[prop], modify_data[prop])
 			})
 
