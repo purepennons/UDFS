@@ -252,7 +252,7 @@ exports.getMainContext = function(root, db, io, options) {
           fd_map.set(fd, f)
         }
       }
-      
+
       if(!f.read) {
         await initStream()
       }
@@ -492,8 +492,8 @@ exports.getMainContext = function(root, db, io, options) {
       let f = fd_map.get(fd)
       if(!f) return cb(fuse['ENOENT'])
 
-      const writable_flag = ['w', 'w+']
-      if(!writable_flag.indexOf(f.flag)) return cb(fuse['EPERM'])
+      // const writable_flag = ['w', 'w+']
+      // if(!writable_flag.indexOf(f.flag)) return cb(fuse['EPERM'])
 
       // copy needed as fuse overrides this buffer
       let copy = new Buffer(len)
