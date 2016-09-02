@@ -8,7 +8,9 @@ const multiparty = require('multiparty')
 const Promise = require('bluebird')
 
 const fs = Promise.promisifyAll(require('fs-extra'))
+const eosAsync = Promise.promisify(eos)
 
+const FsyncWriteStream = require('../../../lib/FsyncWriteStream')
 const config = require('../../../config/config.json')
 
 const storage_path = path.join(__dirname, config.storage_path)
@@ -64,31 +66,31 @@ module.exports = function updateFile(req, res, next) {
         if(!part.filename || uploadFlag) {
           return part.resume()
         } else {
-          // truncate the file to the correct size before pipeing the stream
-          fs.truncate(target, range[0].start, err => {
-            debug(`truncate the size of ${object_id} file to ${range[0].start}`)
-            if(err) {
-              debug('err', err)
-              err.status = 500
-              err.message = 'something wrong when truncate the file'
-              return next(err)
-            }
+          async function save() {
+            try {
+              // truncate the file to the correct size before pipeing the stream
+              await fs.truncateAsync(target, range[0].start)
+              debug(`truncate the size of ${object_id} file to ${range[0].start}`)
 
-            uploadFlag = true
-            let ws = fs.createWriteStream(target, {
-              flags: 'r+',
-              start: range[0].start
-            })
-            .on('error', err => {
-              debug('err', err)
-              err.status = 500
-              err.message = 'something wrong when writing the data'
-              return next(err)
-            })
-            .on('close', () => {
+              uploadFlag = true
+              let ws = fs.createWriteStream(target, {
+                flags: 'r+',
+                start: range[0].start,
+                autoClose: false
+              })
+
+              part.pipe(ws)
+              // part.on('data', data => debug(data.length))
+
+              // waiting for the stream to complete
+              await Promise.all([
+                eosAsync(ws),
+                eosAsync(part)
+              ])
+
               async function updateMeta() {
                 let stat = await fs.statAsync(target)
-                // debug('stat', stat)
+                debug('update_Meta#stat', stat)
 
                 // update the metadata
                 let meta = {}
@@ -97,49 +99,38 @@ module.exports = function updateFile(req, res, next) {
                 await fs.writeAsync(meta_fd, JSON.stringify(meta))
 
                 // release
-                fs.close(meta_fd)
+                // await fs.closeAsync(meta_fd)
+
                 return meta
               }
 
               // update and response
-              updateMeta()
-              .then(meta => {
-                return res.status(200).json({
-                  status: 'success',
-                  message: `${object_id} object was updated from ${range[0].start} position`,
-                  data: [{
-                    fs_id,
-                    meta_id,
-                    object_id,
-                    object_url: `/storage/v1/${fs_id}/files/${object_id}`,
-                    meta
-                  }]
-                })
-              })
-              .catch(err => {
-                debug('err', err)
-                err.status = 500
-                err.message = 'something wrong when updating the metadata'
-                return next(err)
-              })
+              let meta = await updateMeta()
+
+              return meta
+            } catch(err) {
+              debug('updateFile err', err.stack)
+              err.status = 500
+              err.message = 'something wrong when save the data'
+              throw err
+            }
+          }
+
+          save()
+          .then(meta => {
+            return res.status(200).json({
+              status: 'success',
+              message: `${object_id} object was updated from ${range[0].start} position`,
+              data: [{
+                fs_id,
+                meta_id,
+                object_id,
+                object_url: `/storage/v1/${fs_id}/files/${object_id}`,
+                meta
+              }]
             })
-
-            // listen the status of stream
-            eos(part, err => {
-              if(err) {
-                debug('err', err.stack)
-                err.status = 500
-                err.message = 'upload stream failed'
-                return next(err)
-              }
-
-              debug('part stream end')
-            })
-
-            // write the data
-            part.pipe(ws)
-
           })
+          .catch(err => next(err))
         }
       })
       .on('close', () => {
