@@ -167,58 +167,10 @@ exports.getMainContext = function(root, db, io, options) {
       return cb(0)
     })
     .catch(err => {
-      debug('err', err.stack)
-      cb(fuse[err])
+      debug('release_err', err.stack)
+      return cb(fuse[err.code])
     })
 
-/***********************************************/
-    //
-    // function clearup() {
-    //   let f = fd_map.get(fd)
-    //   if(f) {
-    //     debug('release', f)
-    //     if(f.write.buf) {
-    //       // upload the read stream
-    //       // real request
-    //       req.put({
-    //         url: `http://localhost:3000/storage/v1/70642310-3134-11e6-9e2f-3ffeaedf456b/files/e60aa7c4-732e-406f-8697-f0311803f237`,
-    //         encoding: null,
-    //         headers: {
-    //           'range': 'bytes=0-'
-    //         },
-    //         formData: {
-    //           custom_file: {
-    //             value: Buffer.concat(f.write.buf, f.write.buf_len),
-    //             options: {
-    //               filename: 'file.binary',
-    //               contentType: 'application/octet-stream'
-    //             }
-    //           }
-    //         }
-    //       }, (err, res, body) => {
-    //         if(err) return debug(err)
-    //         debug('body', JSON.parse(body.toString()))
-    //       })
-    //
-    //       // req_stream
-    //       // .on('response', res => {
-    //       //   fd_map.delete(fd)
-    //       //   debug('res', res)
-    //       //   debug('keys of res', Object.keys(res))
-    //       //   debug('body', res.body)
-    //       // })
-    //       // .on('error', err => {
-    //       //   debug('response error', err.stack)
-    //       // })
-    //     }
-    //   }
-    //
-    //   fd_map.delete(fd)
-    //   fd_count--
-    //   return cb(0)
-    // }
-    //
-    // clearup()
   }
 
   ops.read = function(key, fd, buf, len, offset, cb) {
