@@ -72,7 +72,7 @@ class IO {
       // pass middleware here. e.g. resolve(mid2(mid1(rs))) or resolve(rs.pipe(mid1).pipe(mid2)) where mid is a function will return a read stream or a transform stream
 
       return rs
-      
+
     } catch(err) {
       err_handler(err)
     }

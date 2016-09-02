@@ -73,14 +73,16 @@ module.exports = function updateFile(req, res, next) {
               debug(`truncate the size of ${object_id} file to ${range[0].start}`)
 
               uploadFlag = true
-              let ws = fs.createWriteStream(target, {
+              let fd = await fs.openAsync(target, 'r+')
+              let ws = fs.createWriteStream(null, {
+                fd: fd,
                 flags: 'r+',
                 start: range[0].start,
-                autoClose: false
+                autoClose: true
               })
 
               part.pipe(ws)
-              // part.on('data', data => debug(data.length))
+              part.on('end', async () => await fs.fsyncAsync(fd))
 
               // waiting for the stream to complete
               await Promise.all([
