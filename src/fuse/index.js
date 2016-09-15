@@ -4,6 +4,12 @@ const debug = require('debug')('fuse')
 const fuse = require('fuse-bindings')
 const IO = require('../io/index')
 const getContext = require('./context').getMainContext
+const cmd_server = require('../cmd_server/app')
+const Bluebird = require('bluebird')
+
+// promisify
+fuse.mountAsync = Bluebird.promisify(fuse.mount)
+fuse.unmountAsync = Bluebird.promisify(fuse.unmount)
 
 class UserspaceFS {
 
@@ -13,6 +19,7 @@ class UserspaceFS {
     this.db = db
 
     this.fuse_ops = ops.fuse_ops || {}
+    this.cmd_ops = ops.cmd_ops || {}
 
     // IO operations must be injected the db instance
     this.io = new IO(this.db)
@@ -20,27 +27,36 @@ class UserspaceFS {
   }
 
   // mount fuse
-  mount() {
-    return new Promise( (resolve, reject) => {
+  async mount() {
+    try {
       let fuseContext = this.getFuseContext()
-      if(!fuseContext) return reject( new Error('Without the fuse context.') )
+      if(!fuseContext) throw new Error('Without the fuse context.')
 
       // mount
-      fuse.mount(this.root, fuseContext, err => {
-        if(err) return reject(err)
-        return resolve(fuseContext)
-      })
+      await fuse.mountAsync(this.root, fuseContext)
 
-    })
+      // boot the cmd-server
+      let app = await cmd_server(fuseContext, {port: this.cmd_ops.port || 8088})
+
+      return {
+        fuseContext: fuseContext,
+        root: fuseContext.root,
+        db: fuseContext.db,
+        io: fuseContext.io
+      }
+
+    } catch(err) {
+      throw err
+    }
   }
 
-  unmount() {
-    return new Promise( (resolve, reject) => {
-      fuse.unmount(this.root, err => {
-        if(err) return reject(err)
-        return resolve()
-      })
-    })
+  async unmount() {
+    try {
+      await unmountAsync(this.root)
+      return
+    } catch(err) {
+      throw err
+    }
   }
 
   // must pass the fuse context to the mount method

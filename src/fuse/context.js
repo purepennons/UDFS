@@ -38,8 +38,18 @@ exports.getMainContext = function(root, db, io, options) {
   let f_ops = files_ops(db.files) // files operation
   let storage_ops = general_ops(db.storageMetadata) // storage operations
 
+  // in order not to change the code, re-assign the variables
+  db.fm_ops = fm_ops
+  db.f_ops = f_ops
+  db.storage_ops = storage_ops
+
   // ops is the context of fuse
   let ops = {}
+
+  // basic properties
+  ops.root = root
+  ops.db = db
+  ops.io = io
 
   // ops.options = ['direct_io', 'dev', 'debug']
   ops.options = options.options || []
@@ -57,6 +67,12 @@ exports.getMainContext = function(root, db, io, options) {
   // listen events
   let e = new EventEmitter()
   ops.events = e
+
+  // event for testing
+  e.on('onCMDBoot', data => {
+    debug('events:', 'onCMDBoot')
+    console.log('Command server is running. The data is received from cmd-server, ', data)
+  })
 
   // data.key = storage_id, data.value = storage_info
   e.on('REGISTER_STORAGE', data => {

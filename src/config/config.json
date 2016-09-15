@@ -12,5 +12,8 @@
     "name": "main",
     "mnt": "./mnt",
     "options": [ "direct_io", "debug", "dev" ]
+  },
+  "cmd_server": {
+    "port": 8088
   }
 }

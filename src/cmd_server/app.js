@@ -7,7 +7,6 @@ const express = require('express')
 const bodyParser = require('body-parser')
 
 const filiter = require('./middlewares/filiter')
-const config = require('./config/config.json')
 
 // routers
 let routers = require('./routes/index')
@@ -37,10 +36,20 @@ app.use( (err, req, res, next) => {
   })
 })
 
-// boot
-app.listen( config.port, () => {
-  debug('Server is listening at %s port', config.port)
-  debug('root: ', config.root)
-})
+module.exports = function(fuseContext, options) {
+  return new Promise((resolve, reject) => {
+    global.fuseContext = fuseContext || undefined
+    global.options = options || {}
+    let port = global.options.port || 8088
 
-module.exports = app
+    // boot the cmd server
+    app.listen( port, err => {
+      if(err) return reject(err)
+      debug('Server is listening at %s port', port)
+
+      global.fuseContext.events.emit('onCMDBoot', 'Chiahao Lin')
+      return resolve(this)
+    })
+
+  })
+}

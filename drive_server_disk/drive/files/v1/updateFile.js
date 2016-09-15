@@ -10,7 +10,6 @@ const Promise = require('bluebird')
 const fs = Promise.promisifyAll(require('fs-extra'))
 const eosAsync = Promise.promisify(eos)
 
-const FsyncWriteStream = require('../../../lib/FsyncWriteStream')
 const config = require('../../../config/config.json')
 
 const storage_path = path.join(__dirname, config.storage_path)
