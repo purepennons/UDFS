@@ -36,6 +36,7 @@ module.exports = function(db) {
    * 			}
    */
   ops.getList = function(ops, cb) {
+    ops = ops || {}
     cb = once(cb)
     db.createReadStream(ops)
     .pipe(concat({encoding:'object'}, data => {

@@ -14,6 +14,7 @@ const v1 = lib.versionWrapper('v1')
 router.get(v1('/fs/:fs_id'), [], v1_fs.getFS)
 
 // storage
-router.get(v1('/storage'), [], v1_storage.getStorageList)
+router.get(v1('/storages'), [], v1_storage.getStorageList)
+router.get(v1('/storages/:storage_id'), [], v1_storage.getStorage)
 
 module.exports = router

@@ -38,16 +38,20 @@ app.use( (err, req, res, next) => {
 
 module.exports = function(fuseContext, options) {
   return new Promise((resolve, reject) => {
-    global.fuseContext = fuseContext || undefined
-    global.options = options || {}
-    let port = global.options.port || 8088
+    fuseContext = fuseContext || undefined
+    options = options || {}
+    let port = options.port || 8088
+
+    // set fuseContext as a global value for routes
+    app.set('fuseContext', fuseContext)
 
     // boot the cmd server
     app.listen( port, err => {
       if(err) return reject(err)
       debug('Server is listening at %s port', port)
+      
+      fuseContext.events.emit('onCMDBoot', 'Chiahao Lin')
 
-      global.fuseContext.events.emit('onCMDBoot', 'Chiahao Lin')
       return resolve(this)
     })
 
