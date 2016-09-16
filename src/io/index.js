@@ -5,6 +5,8 @@ const octal = require('octal')
 const uuid = require('node-uuid')
 const util = require('util')
 const Buffer = require('buffer').Buffer
+const url = require('url')
+const shortid = require('shortid')
 
 // IO requests must pass to middleware before handling the requests
 const R = require('./requests')
@@ -261,6 +263,44 @@ class IO {
         return reject(err)
       })
     })
+  }
+
+
+
+
+  // io requests which may called from cmd-server
+  async register(storage_url=undefined, auth={}, otherInfo={}) {
+    // auth current is not used
+
+    try {
+      let url_parse = url.parse(storage_url)
+
+      // send the request to register the storage
+
+      let res_data = await R.FileSystem.create(storage_url, auth)
+
+      // generate a storage_id
+      let storage_id = shortid.generate()
+
+      // write data to DB#storageMetadata
+      let info = {
+        fs_id: res_data.fs_id,
+        protocol: url_parse.protocol,
+        host: url_parse.host,
+        port: url_parse.port,
+        auth: auth,
+        otherInfo: otherInfo
+      }
+
+      await this.storage_ops.putAsync(storage_id, info)
+
+      info.storage_id = storage_id
+
+      return info
+
+    } catch(err) {
+      throw err
+    }
   }
 }
 

@@ -16,5 +16,6 @@ router.get(v1('/fs/:fs_id'), [], v1_fs.getFS)
 // storage
 router.get(v1('/storages'), [], v1_storage.getStorageList)
 router.get(v1('/storages/:storage_id'), [], v1_storage.getStorage)
+router.post(v1('/storages/create'), [], v1_storage.registerStorage)
 
 module.exports = router

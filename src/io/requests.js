@@ -6,6 +6,12 @@ const http = require('http')
 const Promise = require('bluebird')
 const HTTPCode= require('http-status-codes')
 
+// error code
+const BAD_CODE = new Error('bad http code')
+BAD_CODE.code = 'EREMOTEIO'
+const OP_ERROR = new Error('operation fail')
+OP_ERROR.code = 'EREMOTEIO'
+
 // other define
 const P_Req = function(ops) {
   return new Promise((resolve, reject) => {
@@ -28,11 +34,6 @@ const parseData = function(body, resolve, reject) {
   }
 }
 
-// error code
-const BAD_CODE = new Error('bad http code')
-BAD_CODE.code = 'EREMOTEIO'
-const OP_ERROR = new Error('operation fail')
-OP_ERROR.code = 'EREMOTEIO'
 
 // define all apis of driver
 // const apiVersion = 'v1'
@@ -41,8 +42,9 @@ const root_path = '/storage/v1/'
 // fs
 let FileSystem = {}
 // create
-FileSystem.create = function(host) {
-  const url = [host, root_path, '/create'].join('')
+FileSystem.create = function(host, auth) {
+  // auth current is not used
+  const url = [host, root_path, 'create'].join('')
   return new Promise((resolve, reject) => {
     req.post(url, (err, res, body) => {
       if(err) return reject(err)
