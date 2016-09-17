@@ -104,7 +104,7 @@ class IO {
       // if chunk array is empty, initial a object
       if(f.fileInfo.chunk_arr.length === 0) {
         // get a dest to store the object
-        let dest = policy.getObjDest(this.db, fuse_params.key ,io_params, fuse_params)
+        let dest = await policy.getObjDest(this.db, fuse_params.key ,io_params, fuse_params)
 
         // create a new file
         let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
