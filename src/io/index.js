@@ -56,6 +56,11 @@ class IO {
 
       let f = io_params.f
       let chunk = f.fileInfo.chunk_arr[0] // read only
+
+      /*
+       * BUG: if reading the file before write once, it will throw a error.
+       * Because of the empty chunk
+       */
       let objInfo = chunk.read[0] // read only
       let storage_id = objInfo.storage_id
 
@@ -99,7 +104,7 @@ class IO {
       // if chunk array is empty, initial a object
       if(f.fileInfo.chunk_arr.length === 0) {
         // get a dest to store the object
-        let dest = policy.getObjDest(null)
+        let dest = policy.getObjDest(this.db, fuse_params.key ,io_params, fuse_params)
 
         // create a new file
         let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
@@ -233,14 +238,14 @@ class IO {
     return this.create(meta, io_params, fuse_params)
   }
 
-  create(meta, io_params, fuse_params) {
-    return new Promise((resolve, reject) => {
+  async create(meta, io_params, fuse_params) {
+    try {
       // define storage policy of metadata
-      let dest = policy.getMetaDest(null)
+      let dest = await policy.getMetaDest(this.db, fuse_params.key ,io_params, fuse_params)
 
       /*
-       * TODO: change to correct fs_id
-       */
+      * TODO: change to correct fs_id
+      */
       let fs_id = dest.fs_id
 
       // if(!meta) return reject()
@@ -250,19 +255,19 @@ class IO {
       meta.stat = stat(meta.stat)
 
       // create a new file (only about metadata)
-      R.FileMeta.create(dest.hostname, fs_id, meta)
-      .then(res_meta => {
-        res_meta.dest = dest
-        return resolve(res_meta)
-      })
-      .catch(err => {
-        switch(err.code) {
-          default:
-            err.code = 'EREMOTEIO'
-        }
-        return reject(err)
-      })
-    })
+
+      let res_meta = await R.FileMeta.create(dest.hostname, fs_id, meta)
+      res_meta.dest = dest
+
+      return res_meta
+    } catch(err) {
+      switch(err.code) {
+        default:
+        err.code = 'EREMOTEIO'
+      }
+
+      throw err
+    }
   }
 
 
