@@ -3,32 +3,87 @@
 const debug = require('debug')('files_ops')
 const once = require('once')
 const octal = require('octal')
+const xtend = require('xtend')
 const path = require('path')
 const concat = require('concat-stream')
+const Promise = require('bluebird')
 
 const errno = require('../../lib/errno')
+
+let NOFILE = new Error('Cannot get a file from file_id')
+NOFILE.code = 'NOFILE'
 
 module.exports = function(db) {
   let ops = {}
 
-  ops.get = function(key, cb) {
+  /**
+   * cb(err, file_detail, id)
+   */
+  ops.get = function(id, cb) {
+    db.get(id, {valueEncoding: 'json'}, (err, file_detail) => {
+      if(err && err.notFound) return cb(NOFILE, null, id)
+      if(err) return cb(err, null, id)
+      return cb(null, file_detail, id)
+    })
   }
 
   /**
-   * cb(err, key)
+	 * cb(err, id)
+	 * if err === null -> file exists
+	 */
+	ops.checkNotExist = function(id, cb) {
+		ops.get(id, (err, f, k) => {
+      if(err && err.code === 'NOFILE') return cb(null, id)
+			if(err) return cb(err, id)
+			return cb(errno.EEXIST(id), id)
+    })
+	}
+
+  /**
+   * cb(err, id)
    */
-  ops.writable = function(key, cb) {
+  ops.writable = function(id, cb) {
+    ops.checkNotExist(id, (err, id) => {
+      if(err) return cb(err, id)
+      return cb(null, id)
+    })
   }
 
   /**
-   * cb(err, key)
+   * cb(err, id)
    */
-  ops.put = function(key, data, cb) {
+  ops.put = function(id, data, cb) {
+    ops.writable(id, (err, id) => {
+      if(err) return cb(err, id)
+      return db.put(id, data, {valueEncoding: 'json', sync: true}, err => {
+        if(err) return cb(err, id)
+        return cb(null, id)
+      })
+    })
   }
 
-  ops.del = function(key, cb) {
-
+  ops.update = function(id, modify_data, cb) {
+    ops.get(id, (err, f, id) => {
+      if(err) return cb(err, id)
+      return db.put(id, xtend(f, modify_data), {valueEncoding: 'json', sync: true}, err => {
+        if(err) return cb(err, id)
+        return cb(null, id)
+      })
+    })
   }
+
+  /**
+   * cb(err, id)
+   */
+  ops.del = function(id, cb) {
+    return db.del(id, err => {
+      if(err) return cb(err, id)
+      return cb(null, id)
+    })
+  }
+
+  // promisify
+	ops = Promise.promisifyAll(ops)
 
   return ops
 }

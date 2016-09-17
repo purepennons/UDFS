@@ -1,6 +1,6 @@
 {
   "db": {
-    "location": "/data/db/leveldb",
+    "location": "/data/db_meta/leveldb",
     "options": {
       "createIfMissing": true,
       "errorIfExists": false,
@@ -12,5 +12,8 @@
     "name": "main",
     "mnt": "./mnt",
     "options": [ "direct_io", "debug", "dev" ]
+  },
+  "cmd_server": {
+    "port": 8088
   }
 }

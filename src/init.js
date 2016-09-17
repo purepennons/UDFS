@@ -20,22 +20,25 @@ async function init() {
 
     // initial the file system
     let fs_options = config.fuse
+    let cmd_ops = config.cmd_server
+
     ufs = new UFS(fs_options.mnt, db, {
       fuse_ops: {
         options: fs_options.options
-      }
+      },
+      cmd_ops: cmd_ops
     })
 
     // mount fs
-    await ufs.mount()
+    let UDFS_context = await ufs.mount()
     console.log(`File system is mounted at ${fs_options.mnt}`)
 
+    // UDFS_context.fuseContext.events is a interface to interactive with fuse
+    return UDFS_context
   } catch(err) {
     console.error('Initialization failed', err.stack)
     throw err
   }
-
-  return
 }
 
 // exit handler

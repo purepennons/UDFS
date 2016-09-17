@@ -37,7 +37,7 @@ const file = {
   uid: process.getuid(),
   gid: process.getgid(),
   mode: octal(100755),
-  size: 4096,
+  size: 65537,
   type: 'file',
   status: true,
   file_id: '1234567891'
