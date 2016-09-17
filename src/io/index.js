@@ -142,6 +142,7 @@ class IO {
       // query from DB
       if(!dest) {
         dest = await this.storage_ops.getAsync(storage_id)
+        debug('dest', dest)
         // update the s_map
         io_params.e.emit('REGISTER_STORAGE', {key: storage_id, value: dest})
       }
@@ -262,8 +263,10 @@ class IO {
       return res_meta
     } catch(err) {
       switch(err.code) {
+        case 'ENXIO':
+          err.code = 'ENXIO'
         default:
-        err.code = 'EREMOTEIO'
+          err.code = 'EREMOTEIO'
       }
 
       throw err
@@ -290,7 +293,8 @@ class IO {
       // write data to DB#storageMetadata
       let info = {
         fs_id: res_data.fs_id,
-        protocol: url_parse.protocol,
+        hostname: storage_url,
+        protocol: url_parse.protocol.slice(0, url_parse.protocol.length - 1),
         host: url_parse.host,
         port: url_parse.port,
         auth: auth,
