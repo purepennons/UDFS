@@ -1,12 +1,12 @@
 "use strict"
 const debug = require('debug')('fuse-io')
 const Promise = require('bluebird')
-const octal = require('octal')
 const uuid = require('node-uuid')
 const util = require('util')
 const Buffer = require('buffer').Buffer
 const url = require('url')
 const shortid = require('shortid')
+const xtend = require('xtend')
 
 // IO requests must pass to middleware before handling the requests
 const R = require('./requests')
@@ -306,6 +306,43 @@ class IO {
       info.storage_id = storage_id
 
       return info
+
+    } catch(err) {
+      throw err
+    }
+  }
+
+  async updateStorage(storage_id=undefined, storage_url=undefined, auth=undefined, otherInfo=undefined) {
+    try {
+      if(!storage_id) {
+        let err = new Error('without the storage_id')
+        err.code = 'ENXIO'
+        throw err
+      }
+
+      let storage_info = await this.storage_ops.getAsync(storage_id)
+
+      // pre-processing the data
+      if(storage_url) {
+        let url_parse = url.parse(storage_url)
+        storage_info.hostname = storage_url
+        storage_info.protocol = url_parse.protocol.slice(0, url_parse.protocol.length - 1)
+        storage_info.host = url_parse.host
+        storage_info.port = url_parse.port
+      }
+
+      // extend props from 'auth' and 'otherInfo' properties of storage_info
+
+      storage_info.auth = lib.deepXtend(storage_info.auth, auth)
+      storage_info.otherInfo = lib.deepXtend(storage_info.otherInfo, otherInfo)
+
+      debug('update_storage_info', storage_info)
+
+      // update the storage_info
+      await this.storage_ops.updateAsync(storage_id, storage_info)
+
+      storage_info.storage_id = storage_id
+      return storage_info
 
     } catch(err) {
       throw err

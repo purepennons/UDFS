@@ -172,3 +172,22 @@ exports.genUniqueKeyFromMap = genUniqueKeyFromMap
 exports.getRandomInt = function(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+const deepTypeof = (o) => {
+  return Object.prototype.toString.call(o)
+}
+exports.deepTypeof = deepTypeof
+
+const deepXtend = (origin, modify) => {
+  if(modify && deepTypeof(modify) === '[object Object]') {
+    Object.keys(modify).map(prop => {
+      if(deepTypeof(origin[prop]) === '[object Object]') {
+        origin[prop] = xtend(origin[prop], modify[prop])
+      } else {
+        origin[prop] = modify[prop]
+      }
+    })
+  }
+  return origin
+}
+exports.deepXtend = deepXtend
