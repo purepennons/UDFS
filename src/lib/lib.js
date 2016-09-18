@@ -168,3 +168,7 @@ function genUniqueKeyFromMap(m, start=0, range=65535) {
   return genUniqueKeyFromMap(m, start, range)
 }
 exports.genUniqueKeyFromMap = genUniqueKeyFromMap
+
+exports.getRandomInt = function(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
