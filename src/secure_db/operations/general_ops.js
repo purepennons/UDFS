@@ -6,6 +6,8 @@ const once = require('once')
 const concat = require('concat-stream')
 const Promise = require('bluebird')
 
+const lib = require('../../lib/lib')
+
 
 let NOTFOUND = new Error('Cannot get a object by key')
 NOTFOUND.code = 'NOTFOUND'
@@ -40,7 +42,7 @@ module.exports = function(db) {
     ops.valueEncoding = 'json'
 
     cb = once(cb)
-    
+
     db.createReadStream(ops)
     .pipe(concat({encoding:'object'}, data => {
       cb(null, data)
@@ -89,10 +91,7 @@ module.exports = function(db) {
 
 			// updates all properties
 			// obj will be the data to be updated
-			Object.keys(modify_data).map(prop => {
-				debug('prop', prop)
-				obj[prop] = xtend(obj[prop], modify_data[prop])
-			})
+      obj = lib.deepXtend(obj, modify_data)
 
 			return db.put(key, obj, {valueEncoding: 'json', sync: true}, err => {
 				if(err) return cb(err, key)
