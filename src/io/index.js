@@ -47,7 +47,7 @@ class IO {
   // need to impelement all io methods for fuse operations
   async read(io_params, fuse_params) {
     // retuan a readStream
-    debug('io_params', util.inspect(io_params, false, null))
+    // debug('io_params', util.inspect(io_params, false, null))
     try {
       /*
       * 假設目前一個 file 只會有一個 chunk。
