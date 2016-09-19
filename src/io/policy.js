@@ -46,7 +46,7 @@ exports.getMetaDest = async (db, key, io_params, fuse_params) => {
   try {
     let storage_list = await db.storage_ops.getListAsync({})
 
-    if(storage_list.length === 0) {
+    if(storage_list.length < 1) {
       let err = new Error('Current number of registered storage is zero. Must register a storage first.')
       err.code = 'ENXIO'
       throw err
@@ -54,7 +54,9 @@ exports.getMetaDest = async (db, key, io_params, fuse_params) => {
 
     let dest = undefined
     // get dest by custom middleware
-    storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
+    // storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
+    storage_list = await m_policy.designate(db, key, io_params, fuse_params, storage_list)
+
     debug('extension_storage:', storage_list)
 
     // last policy: random policy
@@ -80,7 +82,7 @@ exports.getObjDest = async (db, key, io_params, fuse_params) => {
   try {
     let storage_list = await db.storage_ops.getListAsync({})
 
-    if(storage_list.length === 0) {
+    if(storage_list.length < 1) {
       let err = new Error('Current number of registered storage is zero. Must register a storage first.')
       err.code = 'ENXIO'
       throw err
@@ -88,7 +90,8 @@ exports.getObjDest = async (db, key, io_params, fuse_params) => {
 
     let dest = undefined
     // get dest by custom middleware
-    storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
+    // storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
+    storage_list = await m_policy.designate(db, key, io_params, fuse_params, storage_list)
 
     // last policy: random policy
     dest = await random_policy(db, key, io_params, fuse_params, storage_list)

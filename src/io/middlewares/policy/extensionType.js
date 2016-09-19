@@ -1,4 +1,4 @@
-const debug = require('debug')('fuse-io#middleware#policy')
+const debug = require('debug')('fuse-io#middleware#policy#extensionType')
 const path = require('path')
 
 // always return the filtered storage_list
@@ -26,7 +26,7 @@ module.exports = async (db, key, io_params, fuse_params, storage_list) => {
     // if create zero candidate in the policy, just return whole storage list (storage_list)
     if(filtered_list.length > 0) return filtered_list
     return storage_list
-    
+
   } catch(err) {
     // if catch a err, just return the whole storage list
     return storage_list
