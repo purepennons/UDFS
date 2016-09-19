@@ -1,6 +1,7 @@
 "use strict"
 
 const debug = require('debug')('cmd-server#updateStorage')
+const util = require('util')
 
 module.exports = function updateStorage(req, res, next) {
 
@@ -24,7 +25,7 @@ module.exports = function updateStorage(req, res, next) {
 
   update()
   .then(storage_info => {
-    debug('storage_info', storage_info)
+    debug('storage_info', util.inspect(storage_info, false, null))
     return res.status(200).json({
       status: 'success',
       message: `information of storage-${storage_id} has been updated.`,

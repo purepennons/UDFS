@@ -3,7 +3,7 @@
 const debug = require('debug')('fuse-io#policy')
 
 const lib = require('../lib/lib')
-const m_policy = require('./middlewares/policy/index')
+const middlewares = require('./middlewares/index')
 
 // const
 // const TEMP_STORAGE_ID = 'storage-1234567890'
@@ -32,10 +32,6 @@ const random_policy = async (db, key, io_params, fuse_params, storage_list) => {
   }
 }
 
-// const next = (o) => {
-//   return o
-// }
-
 /*
  * destination define
  * @param {object} ops - pass all options needed
@@ -54,13 +50,16 @@ exports.getMetaDest = async (db, key, io_params, fuse_params) => {
 
     let dest = undefined
     // get dest by custom middleware
-    // storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
-    storage_list = await m_policy.designate(db, key, io_params, fuse_params, storage_list)
-
-    debug('extension_storage:', storage_list)
+    let transform_ops = await middlewares.policy({
+      db,
+      key,
+      io_params,
+      fuse_params,
+      storage_list
+    })
 
     // last policy: random policy
-    dest = await random_policy(db, key, io_params, fuse_params, storage_list)
+    dest = await random_policy(db, key, io_params, fuse_params, transform_ops.storage_list)
     debug('getMetaDest:', dest)
 
     if(dest) {
@@ -90,11 +89,16 @@ exports.getObjDest = async (db, key, io_params, fuse_params) => {
 
     let dest = undefined
     // get dest by custom middleware
-    // storage_list = await m_policy.extensionType(db, key, io_params, fuse_params, storage_list)
-    storage_list = await m_policy.designate(db, key, io_params, fuse_params, storage_list)
+    let transform_ops = await middlewares.policy({
+      db,
+      key,
+      io_params,
+      fuse_params,
+      storage_list
+    })
 
     // last policy: random policy
-    dest = await random_policy(db, key, io_params, fuse_params, storage_list)
+    dest = await random_policy(db, key, io_params, fuse_params, transform_ops.storage_list)
     debug('getObjDest:', dest)
 
     if(dest) {
