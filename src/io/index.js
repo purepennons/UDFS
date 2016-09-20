@@ -1,12 +1,12 @@
 "use strict"
 const debug = require('debug')('fuse-io')
 const Promise = require('bluebird')
-const octal = require('octal')
 const uuid = require('node-uuid')
 const util = require('util')
 const Buffer = require('buffer').Buffer
 const url = require('url')
 const shortid = require('shortid')
+const xtend = require('xtend')
 
 // IO requests must pass to middleware before handling the requests
 const R = require('./requests')
@@ -47,7 +47,7 @@ class IO {
   // need to impelement all io methods for fuse operations
   async read(io_params, fuse_params) {
     // retuan a readStream
-    debug('io_params', util.inspect(io_params, false, null))
+    // debug('io_params', util.inspect(io_params, false, null))
     try {
       /*
       * 假設目前一個 file 只會有一個 chunk。
@@ -56,6 +56,11 @@ class IO {
 
       let f = io_params.f
       let chunk = f.fileInfo.chunk_arr[0] // read only
+
+      /*
+       * BUG: if reading the file before write once, it will throw a error.
+       * Because of the empty chunk
+       */
       let objInfo = chunk.read[0] // read only
       let storage_id = objInfo.storage_id
 
@@ -99,7 +104,7 @@ class IO {
       // if chunk array is empty, initial a object
       if(f.fileInfo.chunk_arr.length === 0) {
         // get a dest to store the object
-        let dest = policy.getObjDest(null)
+        let dest = await policy.getObjDest(this.db, fuse_params.key ,io_params, fuse_params)
 
         // create a new file
         let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
@@ -137,6 +142,7 @@ class IO {
       // query from DB
       if(!dest) {
         dest = await this.storage_ops.getAsync(storage_id)
+        debug('dest', dest)
         // update the s_map
         io_params.e.emit('REGISTER_STORAGE', {key: storage_id, value: dest})
       }
@@ -233,14 +239,14 @@ class IO {
     return this.create(meta, io_params, fuse_params)
   }
 
-  create(meta, io_params, fuse_params) {
-    return new Promise((resolve, reject) => {
+  async create(meta, io_params, fuse_params) {
+    try {
       // define storage policy of metadata
-      let dest = policy.getMetaDest(null)
+      let dest = await policy.getMetaDest(this.db, fuse_params.key ,io_params, fuse_params)
 
       /*
-       * TODO: change to correct fs_id
-       */
+      * TODO: change to correct fs_id
+      */
       let fs_id = dest.fs_id
 
       // if(!meta) return reject()
@@ -250,19 +256,21 @@ class IO {
       meta.stat = stat(meta.stat)
 
       // create a new file (only about metadata)
-      R.FileMeta.create(dest.hostname, fs_id, meta)
-      .then(res_meta => {
-        res_meta.dest = dest
-        return resolve(res_meta)
-      })
-      .catch(err => {
-        switch(err.code) {
-          default:
-            err.code = 'EREMOTEIO'
-        }
-        return reject(err)
-      })
-    })
+
+      let res_meta = await R.FileMeta.create(dest.hostname, fs_id, meta)
+      res_meta.dest = dest
+
+      return res_meta
+    } catch(err) {
+      switch(err.code) {
+        case 'ENXIO':
+          err.code = 'ENXIO'
+        default:
+          err.code = 'EREMOTEIO'
+      }
+
+      throw err
+    }
   }
 
 
@@ -285,7 +293,8 @@ class IO {
       // write data to DB#storageMetadata
       let info = {
         fs_id: res_data.fs_id,
-        protocol: url_parse.protocol,
+        hostname: storage_url,
+        protocol: url_parse.protocol.slice(0, url_parse.protocol.length - 1),
         host: url_parse.host,
         port: url_parse.port,
         auth: auth,
@@ -297,6 +306,43 @@ class IO {
       info.storage_id = storage_id
 
       return info
+
+    } catch(err) {
+      throw err
+    }
+  }
+
+  async updateStorage(storage_id=undefined, storage_url=undefined, auth=undefined, otherInfo=undefined) {
+    try {
+      if(!storage_id) {
+        let err = new Error('without the storage_id')
+        err.code = 'ENXIO'
+        throw err
+      }
+
+      let storage_info = await this.storage_ops.getAsync(storage_id)
+
+      // pre-processing the data
+      if(storage_url) {
+        let url_parse = url.parse(storage_url)
+        storage_info.hostname = storage_url
+        storage_info.protocol = url_parse.protocol.slice(0, url_parse.protocol.length - 1)
+        storage_info.host = url_parse.host
+        storage_info.port = url_parse.port
+      }
+
+      // extend props from 'auth' and 'otherInfo' properties of storage_info
+
+      storage_info.auth = lib.deepXtend(storage_info.auth, auth)
+      storage_info.otherInfo = lib.deepXtend(storage_info.otherInfo, otherInfo)
+
+      debug('update_storage_info', storage_info)
+
+      // update the storage_info
+      await this.storage_ops.updateAsync(storage_id, storage_info)
+
+      storage_info.storage_id = storage_id
+      return storage_info
 
     } catch(err) {
       throw err

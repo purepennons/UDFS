@@ -150,6 +150,7 @@ exports.getMainContext = function(root, db, io, options) {
     if(!f) return cb(0)
 
     let io_params = {
+      db,
       f: f,
       e: e,
       s_map: s_map
@@ -231,6 +232,7 @@ exports.getMainContext = function(root, db, io, options) {
         f.read = {}
 
         let io_params = {
+          db,
           f: f,
           e: e,
           s_map: s_map
@@ -323,7 +325,7 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     let io_params = {
-
+      db
     }
 
     let fuse_params = {
@@ -394,7 +396,7 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     let io_params = {
-
+      db
     }
 
     let fuse_params = {

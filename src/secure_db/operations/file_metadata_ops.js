@@ -3,7 +3,6 @@
 const debug = require('debug')('file_metadata_ops')
 const once = require('once')
 const octal = require('octal')
-const xtend = require('xtend')
 const path = require('path')
 const concat = require('concat-stream')
 const Promise = require('bluebird')
@@ -162,10 +161,8 @@ module.exports = function(db) {
 			if(key === '/') return cb(errno.EPERM(key), key)
 
 			// updates all properties
-			// file will be the data to be updated
-			Object.keys(modify_data).map(prop => {
-				file[prop] = xtend(file[prop], modify_data[prop])
-			})
+			// obj will be the data to be updated
+      file = lib.deepXtend(file, modify_data)
 
 			return db.put(n.prefix(key), file, {valueEncoding: 'json', sync: true}, err => {
 				if(err) return cb(err, key)
