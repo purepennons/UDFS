@@ -12,7 +12,7 @@ const eosAsync = Promise.promisify(eos)
 
 const config = require('../../../config/config.json')
 
-const storage_path = path.join(__dirname, config.storage_path)
+const storage_path = config.storage_path
 
 /**
  * url: PUT -> /fs_id/files/{object_id}
