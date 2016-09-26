@@ -7,7 +7,7 @@ const fs = Promise.promisifyAll(require('fs-extra'))
 
 const config = require('../../../config/config.json')
 
-const storage_path = path.join(__dirname, config.storage_path)
+const storage_path = config.storage_path
 
 module.exports = function deleteMeta(req, res, next) {
   let fs_id = req.params.fs_id

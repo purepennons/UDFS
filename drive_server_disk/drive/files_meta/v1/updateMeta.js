@@ -8,7 +8,7 @@ const fs = Promise.promisifyAll(require('fs-extra'))
 
 const config = require('../../../config/config.json')
 
-const storage_path = path.join(__dirname, config.storage_path)
+const storage_path = config.storage_path
 
 /**
  * url: PUT -> /{fs_id}/meta/{meta_id}

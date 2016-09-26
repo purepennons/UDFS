@@ -8,7 +8,7 @@ const fs = bluebird.promisifyAll(require('fs-extra'))
 
 const config = require('../../../config/config.json')
 
-const storage_path = path.join(__dirname, config.storage_path)
+const storage_path = config.storage_path
 
 // set max size of the file to 1 TB
 const MAX_FILE_SIZE = config.MAX_FILE_SIZE

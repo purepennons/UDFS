@@ -8,7 +8,7 @@ const mkdirs = Promise.promisify(require('fs-extra').mkdirs)
 
 const config = require('../../../config/config.json')
 
-const storage_path = path.join(__dirname, config.storage_path) // will be setted by configuration
+const storage_path = config.storage_path
 
 module.exports = function createFS(req, res, next) {
   let fs_id = uuid.v1() // time-based
