@@ -55,10 +55,11 @@ module.exports = function updateFile(req, res, next) {
       let form = new multiparty.Form()
       let uploadFlag = false  // only allow one file to be uploaded
 
-      form.on('error', err => {
+      form
+      .on('error', err => {
         debug('err', err)
         err.status = 500
-        next(err)
+        return next(err)
       })
       .on('part', part => {
         // part is a readable stream
@@ -83,55 +84,65 @@ module.exports = function updateFile(req, res, next) {
               part.pipe(ws)
               part.on('end', async () => await fs.fsyncAsync(fd))
 
-              // waiting for the stream to complete
-              await Promise.all([
-                eosAsync(ws),
-                eosAsync(part)
-              ])
+              ws
+              .on('close', () => {
+                async function updateMeta() {
+                  try {
+                    let stat = await fs.statAsync(target)
+                    debug('update_Meta#stat', stat)
 
-              async function updateMeta() {
-                let stat = await fs.statAsync(target)
-                debug('update_Meta#stat', stat)
+                    // update the metadata
+                    let meta = {}
+                    meta['stat'] = xtend(old_meta['stat'], stat)
+                    let meta_fd = await fs.openAsync(meta_target, 'w')
+                    await fs.writeAsync(meta_fd, JSON.stringify(meta))
 
-                // update the metadata
-                let meta = {}
-                meta['stat'] = xtend(old_meta['stat'], stat)
-                let meta_fd = await fs.openAsync(meta_target, 'w')
-                await fs.writeAsync(meta_fd, JSON.stringify(meta))
+                    // release
+                    // await fs.closeAsync(meta_fd)
+                    return meta
+                  } catch(err) {
+                    throw err
+                  }
+                }
 
-                // release
-                // await fs.closeAsync(meta_fd)
-
-                return meta
-              }
-
-              // update and response
-              let meta = await updateMeta()
-
-              return meta
+                updateMeta()
+                .then(meta => {
+                  return res.status(200).json({
+                    status: 'success',
+                    message: `${object_id} object was updated from ${range[0].start} position`,
+                    data: [{
+                      fs_id,
+                      meta_id,
+                      object_id,
+                      object_url: `/storage/v1/${fs_id}/files/${object_id}`,
+                      meta
+                    }]
+                  })
+                })
+                .catch(err => {
+                  debug('err', err.stack)
+                  err.status = 500
+                  err.message = 'something wrong when updating the data'
+                  return next(err)
+                })
+              })
             } catch(err) {
               debug('updateFile err', err.stack)
               err.status = 500
-              err.message = 'something wrong when save the data'
+              err.message = 'something wrong when saving the data'
               throw err
             }
+
+            // waiting for the stream to complete
+            // await Promise.all([
+            //   eosAsync(ws),
+            //   eosAsync(part)
+            // ])
+
+            return
           }
 
-          save()
-          .then(meta => {
-            return res.status(200).json({
-              status: 'success',
-              message: `${object_id} object was updated from ${range[0].start} position`,
-              data: [{
-                fs_id,
-                meta_id,
-                object_id,
-                object_url: `/storage/v1/${fs_id}/files/${object_id}`,
-                meta
-              }]
-            })
-          })
-          .catch(err => next(err))
+          save().catch(err => next(err))
         }
       })
       .on('close', () => {
