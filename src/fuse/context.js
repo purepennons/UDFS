@@ -15,6 +15,7 @@ const EventEmitter = require('events').EventEmitter
 
 const lib = require('../lib/lib')
 const Files = require('../lib/files')
+const log = require('../lib/log')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
