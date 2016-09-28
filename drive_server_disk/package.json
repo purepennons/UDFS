@@ -38,6 +38,7 @@
     "log4js": "0.6.38",
     "multiparty": "4.1.2",
     "node-uuid": "1.4.7",
+    "pidusage": "^1.0.8",
     "range-parser": "1.1.0",
     "xtend": "4.0.1"
   }
