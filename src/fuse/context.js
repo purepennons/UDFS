@@ -23,6 +23,7 @@ const files_ops = require('../secure_db/operations/files_ops')
 const general_ops = require('../secure_db/operations/general_ops')
 
 // promisify
+const pidUsage = Promise.promisify(require('pidusage').stat)
 
 // global values in the scope
 const FD_MAX = 65535
@@ -85,6 +86,26 @@ exports.getMainContext = function(root, db, io, options) {
   // for mesure
   let t_map = new Map()
 
+
+  // start to monitor
+  if(process.env.BENCH && process.env.MONITOR) {
+    pidUsage(process.pid)
+    .then(stat => {
+      log.cpu.info(lib.strF( 'start_monitor', 'cpu', stat.cpu ))
+      log.memory.info(lib.strF( 'start_monitor', 'memory', stat.cpu ))
+    })
+    .catch(err => debug('err', err.stack))
+
+    setInterval(()=> {
+      pidUsage(process.pid)
+      .then(stat => {
+        log.cpu.info(lib.strF( 'monitor', 'cpu', stat.cpu ))
+        log.memory.info(lib.strF( 'monitor', 'memory', stat.cpu ))
+      })
+      .catch(err => debug('err', err.stack))
+    }, 250)
+  }
+
   // param: "key" === "path"
   ops.getattr = function(key, cb) {
     debug('getattr = %s', key)
@@ -95,7 +116,7 @@ exports.getMainContext = function(root, db, io, options) {
       if(err) return cb(fuse[err.code])
       debug('stat', s)
 
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'getattr', eFunc('getattr end')) )
+      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'getattr', eFunc('getattr end') ))
       return cb(0, s)
     })
   }
@@ -143,7 +164,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     open_gen()
     .then(fd => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'open', eFunc('open end')) )
+      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'open', eFunc('open end') ))
       cb(0, fd)
     })
     .catch(err => {
@@ -184,7 +205,7 @@ exports.getMainContext = function(root, db, io, options) {
         if(process.env.BENCH) {
           let t = t_map.get('write')('write end')
           t_map.delete('write')
-          log.io.info(lib.strF(key, 'write', t))
+          log.io.info(lib.strF( key, 'write', t ))
         }
       }
 
@@ -192,7 +213,7 @@ exports.getMainContext = function(root, db, io, options) {
         if(process.env.BENCH) {
           let t = t_map.get('read')('read end')
           t_map.delete('read')
-          log.io.info(lib.strF(key, 'read', t))
+          log.io.info(lib.strF( key, 'read', t ))
         }
       }
     }
@@ -396,7 +417,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     mkdir_gen()
     .then(k => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'mkdir', eFunc('mkdir end')) )
+      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'mkdir', eFunc('mkdir end') ))
       cb(0)
     })
     .catch(err => cb(fuse[err.code]))
@@ -467,7 +488,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     create_gen()
     .then(result => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'create', eFunc('create end')) )
+      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'create', eFunc('create end') ))
       ops.open(key, -1, cb)
     })
     .catch(err => cb(fuse[err.code]))
