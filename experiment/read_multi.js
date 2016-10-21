@@ -18,11 +18,10 @@ console.log(args)
 
 // setup
 const base_path = path.resolve(p)
-shell.rm('-rf', base_path)
-shell.mkdir(base_path)
 
-// write
+// read
 for(let i=0; i<time; i++) {
+
   let folder = path.join(base_path, `/${i}`)
   shell.mkdir(folder)
 
@@ -30,14 +29,6 @@ for(let i=0; i<time; i++) {
     let file = path.join(folder, `/${filename}-${j}`)
     console.log(file)
     shell.exec(clear_cache).stdout
-    shell.exec(`dd if=/dev/zero of=${file} bs=${bs} count=${count} conv=fdatasync`)
+    shell.exec(`dd if=${file} of=/dev/null bs=${bs}`)
   }
 }
-
-// read
-/*for(let i=0; i<time; i++) {
-  let file = path.join(base_path, `/${filename}-${i}`)
-  console.log(file)
-  shell.exec(clear_cache).stdout
-  shell.exec(`dd if=${file} of=/dev/null bs=${bs}`)
-}*/
