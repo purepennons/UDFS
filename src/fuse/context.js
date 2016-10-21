@@ -136,6 +136,8 @@ exports.getMainContext = function(root, db, io, options) {
     debug('open = %s, flag = %s', key, flag)
 
     if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('open start')
+    if(process.env.BENCH && process.env.MULTI_READ && !t_map.get('read_multi')) t_map.set('read_multi', lib.mt('read_multi start'))
+
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
     async function open_gen() {
       let s = await fm_ops.getStatAsync(key)
@@ -207,6 +209,12 @@ exports.getMainContext = function(root, db, io, options) {
           t_map.delete('write')
           log.io.info(lib.strF( key, 'write', t ))
         }
+
+        if(process.env.BENCH && process.env.MULTI_WRITE) {
+          let t = t_map.get('write_multi')('write_multi end')
+          t_map.delete('write_multi')
+          log.io.info(lib.strF( key, 'write_multi', t ))
+        }
       }
 
       if(f.read) {
@@ -214,6 +222,12 @@ exports.getMainContext = function(root, db, io, options) {
           let t = t_map.get('read')('read end')
           t_map.delete('read')
           log.io.info(lib.strF( key, 'read', t ))
+        }
+
+        if(process.env.BENCH && process.env.MULTI_READ) {
+          let t = t_map.get('read_multi')('read_multi end')
+          t_map.delete('read_multi')
+          log.io.info(lib.strF( key, 'read_multi', t ))
         }
       }
     }
@@ -428,6 +442,8 @@ exports.getMainContext = function(root, db, io, options) {
     debug('create %s, mode = %s', key, mode)
 
     if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('create start')
+    if(process.env.BENCH && process.env.MULTI_WRITE && !t_map.get('write_multi')) t_map.set('write_multi', lib.mt('write_multi start'))
+
     // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
     // ignore now
     let basic_stat = lib.statWrapper({
