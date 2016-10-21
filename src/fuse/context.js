@@ -110,13 +110,13 @@ exports.getMainContext = function(root, db, io, options) {
   ops.getattr = function(key, cb) {
     debug('getattr = %s', key)
 
-    if(process.env.BENCH) var eFunc = lib.mt('getattr start')
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('getattr start')
     fm_ops.getStat(key, (err, s, k) => {
       // debug('getStat error', err)
       if(err) return cb(fuse[err.code])
       debug('stat', s)
 
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'getattr', eFunc('getattr end') ))
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'getattr', eFunc('getattr end') ))
       return cb(0, s)
     })
   }
@@ -135,7 +135,7 @@ exports.getMainContext = function(root, db, io, options) {
   ops.open = function(key, flag, cb) {
     debug('open = %s, flag = %s', key, flag)
 
-    if(process.env.BENCH) var eFunc = lib.mt('open start')
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('open start')
     if(fd_count > FD_MAX) return cb(fuse['EMFILE'])
     async function open_gen() {
       let s = await fm_ops.getStatAsync(key)
@@ -164,7 +164,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     open_gen()
     .then(fd => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'open', eFunc('open end') ))
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'open', eFunc('open end') ))
       cb(0, fd)
     })
     .catch(err => {
@@ -202,7 +202,7 @@ exports.getMainContext = function(root, db, io, options) {
 
         }
 
-        if(process.env.BENCH) {
+        if(process.env.BENCH && process.env.HANDLER) {
           let t = t_map.get('write')('write end')
           t_map.delete('write')
           log.io.info(lib.strF( key, 'write', t ))
@@ -210,7 +210,7 @@ exports.getMainContext = function(root, db, io, options) {
       }
 
       if(f.read) {
-        if(process.env.BENCH) {
+        if(process.env.BENCH && process.env.HANDLER) {
           let t = t_map.get('read')('read end')
           t_map.delete('read')
           log.io.info(lib.strF( key, 'read', t ))
@@ -234,7 +234,7 @@ exports.getMainContext = function(root, db, io, options) {
   ops.read = function(key, fd, buf, len, offset, cb) {
     debug('read from %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
 
-    if(process.env.BENCH && !t_map.get('read')) t_map.set('read', lib.mt('read start'))
+    if(process.env.BENCH && process.env.HANDLER && !t_map.get('read')) t_map.set('read', lib.mt('read start'))
 
     let f = fd_map.get(fd)
     if(!f) return cb(fuse['ENOENT'])
@@ -354,7 +354,7 @@ exports.getMainContext = function(root, db, io, options) {
   ops.mkdir = function(key, mode, cb) {
     debug('mkdir %s, mode = %s', key, mode)
 
-    if(process.env.BENCH) var eFunc = lib.mt('mkdir start')
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('mkdir start')
     let basic_stat = lib.statWrapper({
       mode: mode + octal(40000),  // octal(40000) means that the file is a directory
       size: DIRECTORY_SIZE,
@@ -417,7 +417,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     mkdir_gen()
     .then(k => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'mkdir', eFunc('mkdir end') ))
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'mkdir', eFunc('mkdir end') ))
       cb(0)
     })
     .catch(err => cb(fuse[err.code]))
@@ -427,7 +427,7 @@ exports.getMainContext = function(root, db, io, options) {
   ops.create = function(key, mode, cb) {
     debug('create %s, mode = %s', key, mode)
 
-    if(process.env.BENCH) var eFunc = lib.mt('create start')
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('create start')
     // maybe need to handle 'w+' mode which must truncate the size to zero first if the file already exists.
     // ignore now
     let basic_stat = lib.statWrapper({
@@ -488,7 +488,7 @@ exports.getMainContext = function(root, db, io, options) {
 
     create_gen()
     .then(result => {
-      if(process.env.BENCH) log.handlers.info(lib.strF( key, 'create', eFunc('create end') ))
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'create', eFunc('create end') ))
       ops.open(key, -1, cb)
     })
     .catch(err => cb(fuse[err.code]))
@@ -502,7 +502,7 @@ exports.getMainContext = function(root, db, io, options) {
     debug('count', ++c)
     debug('write to %s, fd = %s, buffer_len = %s, len = %s, offset = %s', key, fd, buf.length, len, offset)
 
-    if(process.env.BENCH && !t_map.get('write')) t_map.set('write', lib.mt('write start'))
+    if(process.env.BENCH && process.env.HANDLER && !t_map.get('write')) t_map.set('write', lib.mt('write start'))
 
     try {
       /*
