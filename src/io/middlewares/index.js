@@ -10,6 +10,8 @@ const enable_list = require('../../config/enable_middlewares.json')
 let middlewares = {}
 
 // will return a promise function which params are db, key, io_params, fuse_params and storage_list
+// default: passthrough middleware
+enable_list.policy.unshift('passthrough')
 middlewares.policy = pipeP.apply(null, enable_list.policy.map(mid => m_policy[mid]))
 
 // exports all middlewares
