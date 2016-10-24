@@ -1,0 +1,16 @@
+shjs write_multi.js 64k 8 10 512k_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/512k_multi_100mb 200
+shjs write_multi.js 64k 8 10 512k_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/512k_multi_100mb 200
+shjs write_multi.js 64k 16 10 1mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/1mb_multi_100mb 100
+shjs write_multi.js 64k 16 10 1mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/1mb_multi_100mb 100
+shjs write_multi.js 64k 160 10 10mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/10mb_multi_100mb 10
+shjs write_multi.js 64k 160 10 10mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/10mb_multi_100mb 10
+shjs write_multi.js 64k 1600 10 100mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/100mb_multi_100mb 1
+shjs write_multi.js 64k 1600 10 100mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/100mb_multi_100mb 1
+shjs read_multi.js 64k 8 10 512k_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/512k_multi_100mb 200
+shjs read_multi.js 64k 8 10 512k_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/512k_multi_100mb 200
+shjs read_multi.js 64k 16 10 1mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/1mb_multi_100mb 100
+shjs read_multi.js 64k 16 10 1mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/1mb_multi_100mb 100
+shjs read_multi.js 64k 160 10 10mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/10mb_multi_100mb 10
+shjs read_multi.js 64k 160 10 10mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/10mb_multi_100mb 10
+shjs read_multi.js 64k 1600 10 100mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_hdd_e2/100mb_multi_100mb 1
+shjs read_multi.js 64k 1600 10 100mb_multi_100mb /home/root/thesis_src/thesis/src/mnt/storage_ssd_e2/100mb_multi_100mb 1
