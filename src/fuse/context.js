@@ -563,7 +563,105 @@ exports.getMainContext = function(root, db, io, options) {
 
   ops.truncate = function(key, size, cb) {
     debug('truncate %s, size = %s', key, size)
-    cb(0)
+
+    // let f = fd_map.get(fd)
+    // if(!f) return cb(fuse['ENOENT'])
+    //
+    // if(!f.write) {
+    //   f.write = {}
+    //   f.write.buf = []
+    //   f.write.offsets = [] // 有待確認運作機制
+    //   f.write.count = 0
+    //   f.write.buf_len = 0
+    // }
+    //
+    // f.write.buf.push(new Buffer(0))
+    // f.write.offsets.push(size)
+    // f.write.count++
+    // f.write.buf_len = 0
+    //
+    // fd_map.set(fd, f)
+    //
+    // let io_params = {
+    //   db,
+    //   f: f,
+    //   e: e,
+    //   s_map: s_map
+    // }
+    //
+    // let fuse_params = {
+    //   key,
+    //   fd,
+    //   cb
+    // }
+    //
+    //
+    //
+    // aysnc function truncate() {
+    //   try {
+    //
+    //     let res_meta = await io.write(f.write.buf, io_params, fuse_params)
+    //     return res_meta
+    //   } catch(err) {
+    //     throw err
+    //   }
+    // }
+    return cb(0)
+  }
+
+  ops.ftruncate = function(key, fd, size, cb) {
+    debug('ftruncate %s, size = %s', key, size)
+
+    let f = fd_map.get(fd)
+    if(!f) return cb(fuse['ENOENT'])
+
+    if(!f.write) {
+      f.write = {}
+      f.write.buf = []
+      f.write.offsets = [] // 有待確認運作機制
+      f.write.count = 0
+      f.write.buf_len = 0
+    }
+
+    f.write.buf.push(new Buffer(0))
+    f.write.offsets.push(size)
+    f.write.count++
+    f.write.buf_len = 0
+
+    fd_map.set(fd, f)
+
+    let io_params = {
+      db,
+      f: f,
+      e: e,
+      s_map: s_map
+    }
+
+    let fuse_params = {
+      key,
+      fd,
+      size,
+      cb
+    }
+
+    async function truncate() {
+      try {
+        // just set buffer size to zero and offset is equal to the truncate size.
+        // do same thing as write operation
+        let res_meta = await io.write(f.write.buf, io_params, fuse_params)
+        return res_meta
+      } catch(err) {
+        throw err
+      }
+    }
+
+    truncate()
+    .then(() => cb(0))
+    .catch(err => {
+      debug('ftruncate_err', err.stack)
+      return cb(fuse[err.code])
+    })
+
   }
 
   return ops
