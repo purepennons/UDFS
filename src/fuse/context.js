@@ -564,49 +564,8 @@ exports.getMainContext = function(root, db, io, options) {
   ops.truncate = function(key, size, cb) {
     debug('truncate %s, size = %s', key, size)
 
-    // let f = fd_map.get(fd)
-    // if(!f) return cb(fuse['ENOENT'])
-    //
-    // if(!f.write) {
-    //   f.write = {}
-    //   f.write.buf = []
-    //   f.write.offsets = [] // 有待確認運作機制
-    //   f.write.count = 0
-    //   f.write.buf_len = 0
-    // }
-    //
-    // f.write.buf.push(new Buffer(0))
-    // f.write.offsets.push(size)
-    // f.write.count++
-    // f.write.buf_len = 0
-    //
-    // fd_map.set(fd, f)
-    //
-    // let io_params = {
-    //   db,
-    //   f: f,
-    //   e: e,
-    //   s_map: s_map
-    // }
-    //
-    // let fuse_params = {
-    //   key,
-    //   fd,
-    //   cb
-    // }
-    //
-    //
-    //
-    // aysnc function truncate() {
-    //   try {
-    //
-    //     let res_meta = await io.write(f.write.buf, io_params, fuse_params)
-    //     return res_meta
-    //   } catch(err) {
-    //     throw err
-    //   }
-    // }
-    return cb(0)
+    ops.open(key, -1, fd => ops.ftruncate(key, fd, size, cb))
+
   }
 
   ops.ftruncate = function(key, fd, size, cb) {
@@ -623,10 +582,12 @@ exports.getMainContext = function(root, db, io, options) {
       f.write.buf_len = 0
     }
 
-    f.write.buf.push(new Buffer(0))
-    f.write.offsets.push(size)
+    debug('size-', f.stat.size-size)
+    let len = (size <= f.stat.size)? 0: size - f.stat.size
+    f.write.buf.push( Buffer.alloc(len) )
+    f.write.offsets.push( (size <= f.stat.size)? size: f.stat.size )
     f.write.count++
-    f.write.buf_len = 0
+    f.write.buf_len = len
 
     fd_map.set(fd, f)
 
