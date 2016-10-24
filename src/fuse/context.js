@@ -359,9 +359,17 @@ exports.getMainContext = function(root, db, io, options) {
 
   ops.readdir = function(key, cb) {
     debug('readdir = %s', key)
+
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('readdir start')
+
     fm_ops.getList(key, (err, files) => {
       if(err) return cb(fuse[err.code])
-      return cb(0, files.concat(['.', '..']))
+
+      files = files.concat(['.', '..'])
+
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'readdir', eFunc('readdir end') ))
+
+      return cb(0, files)
     })
   }
 
@@ -565,11 +573,12 @@ exports.getMainContext = function(root, db, io, options) {
     debug('truncate %s, size = %s', key, size)
 
     ops.open(key, -1, fd => ops.ftruncate(key, fd, size, cb))
-
   }
 
   ops.ftruncate = function(key, fd, size, cb) {
     debug('ftruncate %s, size = %s', key, size)
+
+    if(process.env.BENCH && process.env.HANDLER) var eFunc = lib.mt('ftruncate start')
 
     let f = fd_map.get(fd)
     if(!f) return cb(fuse['ENOENT'])
@@ -582,7 +591,6 @@ exports.getMainContext = function(root, db, io, options) {
       f.write.buf_len = 0
     }
 
-    debug('size-', f.stat.size-size)
     let len = (size <= f.stat.size)? 0: size - f.stat.size
     f.write.buf.push( Buffer.alloc(len) )
     f.write.offsets.push( (size <= f.stat.size)? size: f.stat.size )
@@ -617,7 +625,10 @@ exports.getMainContext = function(root, db, io, options) {
     }
 
     truncate()
-    .then(() => cb(0))
+    .then(() =>  {
+      if(process.env.BENCH && process.env.HANDLER) log.handlers.info(lib.strF( key, 'ftruncate', eFunc('ftruncate end') ))
+      return cb(0)
+    })
     .catch(err => {
       debug('ftruncate_err', err.stack)
       return cb(fuse[err.code])
