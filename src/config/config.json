@@ -11,7 +11,7 @@
   "fuse": {
     "name": "main",
     "mnt": "./mnt",
-    "options": [ "direct_io"]
+    "options": [ "direct_io", "max_read=131072", "max_write=131072"]
   },
   "cmd_server": {
     "port": 8088
