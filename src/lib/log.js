@@ -11,5 +11,6 @@ log.handlers = log4js.getLogger('handlers')
 log.io = log4js.getLogger('io')
 log.cpu = log4js.getLogger('cpu')
 log.memory = log4js.getLogger('memory')
+log.get_dest = log4js.getLogger('get_dest')
 
 module.exports = log

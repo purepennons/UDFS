@@ -15,6 +15,7 @@ const stat = require('../lib/stat')
 const lib = require('../lib/lib')
 const Chunk = require('../lib/chunk')
 const Files = require('../lib/files')
+const log = require('../lib/log')
 
 // db operations
 const file_metadata_ops = require('../secure_db/operations/file_metadata_ops')
@@ -75,6 +76,8 @@ class IO {
         io_params.e.emit('REGISTER_STORAGE', {key: storage_id, value: dest})
       }
 
+      if(process.env.BENCH && process.env.DEST) log.get_dest.info(lib.strF( fuse_params.key, 'read-getReadDest', dest.hostname ))
+
       let rs = await R.File.get(dest.hostname, dest.fs_id, objInfo.object_id, fuse_params.offset, null)
       // pass middleware here. e.g. resolve(mid2(mid1(rs))) or resolve(rs.pipe(mid1).pipe(mid2)) where mid is a function will return a read stream or a transform stream
 
@@ -105,6 +108,8 @@ class IO {
       if(f.fileInfo.chunk_arr.length === 0) {
         // get a dest to store the object
         let dest = await policy.getObjDest(this.db, fuse_params.key ,io_params, fuse_params)
+
+        if(process.env.BENCH && process.env.DEST) log.get_dest.info(lib.strF( fuse_params.key, 'write-getObjDest', dest.hostname ))
 
         // create a new file
         let res_meta = await R.FileMeta.create(dest.hostname, dest.fs_id, null)
@@ -243,6 +248,8 @@ class IO {
     try {
       // define storage policy of metadata
       let dest = await policy.getMetaDest(this.db, fuse_params.key ,io_params, fuse_params)
+
+      if(process.env.BENCH && process.env.DEST) log.get_dest.info(lib.strF( fuse_params.key, 'create-getMetaDest', dest.hostname ))
 
       /*
       * TODO: change to correct fs_id

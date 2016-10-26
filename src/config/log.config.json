@@ -6,7 +6,7 @@
           "maxLogSize": 10485760,
           "backups": 2,
           "absolute": true,
-          "category": [ "handlers", "io", "cpu", "memory" ],
+          "category": [ "handlers", "io", "cpu", "memory", "get_dest" ],
           "layout": {
             "type": "pattern",
             "pattern": "%c, %d{ABSOLUTE}, %m"
@@ -14,7 +14,7 @@
       },
       {
           "type": "console",
-          "category": [ "handlers", "io", "cpu", "memory" ]
+          "category": [ "handlers", "io", "cpu", "memory", "get_dest" ]
       }
   ],
   "replaceConsole": false
