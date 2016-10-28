@@ -1,0 +1,5 @@
+cat local_hdd_remote_jpg_1storages_100times_read.csv | grep read-getReadDest > dest_local_hdd_remote_jpg_1storages_100times_read.csv
+cat local_hdd_remote_jpg_1storages_100times_read.csv | grep read_multi >peformance_local_hdd_remote_jpg_1storages_100times_read.csv
+
+cat local_hdd_remote_jpg_1storages_100times_write.csv | grep write-getObjDest > dest_local_hdd_remote_jpg_1storages_100times_write.csv
+cat local_hdd_remote_jpg_1storages_100times_write.csv | grep write_multi >peformance_local_hdd_remote_jpg_1storages_100times_write.csv

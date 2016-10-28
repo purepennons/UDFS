@@ -1,0 +1,4 @@
+cat dest_extensionType_designate_local_hdd_remote_jpg_3storages_100times_write.csv | grep outer | grep dat | awk '{count[$5]++} END {for (word in count) print word, count[word]}' > dest_extensionType_designate_outer_dat.dat
+cat dest_extensionType_designate_local_hdd_remote_jpg_3storages_100times_write.csv | grep outer | grep jpg | awk '{count[$5]++} END {for (word in count) print word, count[word]}' > dest_extensionType_designate_outer_jpg.dat
+cat dest_extensionType_designate_local_hdd_remote_jpg_3storages_100times_write.csv | grep storage_hdd_e2 | grep dat | awk '{count[$5]++} END {for (word in count) print word, count[word]}' > dest_extensionType_designate_designate_dat.dat
+cat dest_extensionType_designate_local_hdd_remote_jpg_3storages_100times_write.csv | grep storage_hdd_e2 | grep jpg | awk '{count[$5]++} END {for (word in count) print word, count[word]}' > dest_extensionType_designate_designate_jpg.dat
