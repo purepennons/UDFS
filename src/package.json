@@ -1,7 +1,7 @@
 {
-  "name": "sdfs",
+  "name": "udfs",
   "version": "0.0.1",
-  "description": "Software Defined File System",
+  "description": "User-Defined File System for Object Storage",
   "main": "./bin/boot.js",
   "scripts": {
     "test": "./node_modules/.bin/mocha --compilers js:babel-core/register",
@@ -13,7 +13,7 @@
   "author": "Chiahao Lin",
   "repository": {
     "type": "git",
-    "url": "git://github.com/purepennons/thesis.git"
+    "url": "git://github.com/purepennons/UDFS.git"
   },
   "license": "ISC",
   "devDependencies": {
