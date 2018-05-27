@@ -11,7 +11,7 @@
   "author": "Chiahao Lin",
   "repository": {
     "type": "git",
-    "url": "git://github.com/purepennons/thesis.git"
+    "url": "git://github.com/purepennons/UDFS.git"
   },
   "license": "ISC",
   "devDependencies": {
